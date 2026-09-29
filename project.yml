@@ -1,0 +1,19 @@
+name: QuSeQi
+
+options:
+  bundleIdPrefix: com.quseqi
+  deploymentTarget:
+    iOS: "15.0"
+
+targets:
+  QuSeQi:
+    type: application
+    platform: iOS
+    sources:
+      - path: App/Sources
+      - path: App/www/index.html
+        buildPhase: resources
+    settings:
+      INFOPLIST_KEY_CFBundleDisplayName: "取色器"
+      INFOPLIST_KEY_NSCameraUsageDescription: "拍照取色需要使用相机"
+      INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "从相册选择图片进行取色需要访问照片"
