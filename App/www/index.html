@@ -587,6 +587,11 @@
       font-size: 13px;
       line-height: 1.6;
     }
+    .backup-log { margin-top: 14px; }
+    .backup-log h3 { margin: 0 0 2px; font-size: 13px; }
+    .backup-empty { font-size: 12px; color: var(--muted); padding: 8px 0; }
+    .backup-entry { font-size: 12px; color: var(--muted); padding: 7px 0; border-top: 1px solid var(--line); }
+    .backup-entry:first-of-type { border-top: 0; }
     .recipe-card { padding: 14px; border: 1px solid var(--line); border-radius: 11px; }
     .recipe-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
     .recipe-card-title { display: flex; align-items: center; gap: 9px; min-width: 0; }
@@ -849,6 +854,10 @@
           <div class="record-list" id="recordList">
             <div class="record-empty" id="recordEmpty">取色后填写一次试调数据，保存的配方会出现在这里。</div>
           </div>
+          <div class="backup-log" aria-label="备份记录">
+            <h3>备份记录</h3>
+            <div id="backupLogList"><div class="backup-empty">暂无备份记录，下载或导入记录后会记在这里。</div></div>
+          </div>
         </section>
 
         <section class="advice-panel" aria-labelledby="adviceHeading">
@@ -921,6 +930,7 @@
       var downloadRecords = document.getElementById('downloadRecords');
       var importRecords = document.getElementById('importRecords');
       var recordList = document.getElementById('recordList');
+      var backupLogList = document.getElementById('backupLogList');
       var recordEmpty = document.getElementById('recordEmpty');
       var recordCount = document.getElementById('recordCount');
       var sampleCanvas = document.createElement('canvas');
@@ -942,6 +952,7 @@
       var currentPalette = null;
       var currentNipponCode = '—';
       var recipeRecords = [];
+      var backupLog = [];
       var lastSourcePoint = null;
       var lastDisplayPoint = null;
 
@@ -1247,6 +1258,38 @@
         return lines.join('\n');
       }
 
+      function fmtBackupTime(d) {
+        function p(n) { return (n < 10 ? '0' : '') + n; }
+        return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+      }
+      function renderBackupLog() {
+        backupLogList.innerHTML = '';
+        if (!backupLog.length) {
+          var empty = document.createElement('div');
+          empty.className = 'backup-empty';
+          empty.textContent = '暂无备份记录，下载或导入记录后会记在这里。';
+          backupLogList.appendChild(empty);
+          return;
+        }
+        backupLog.forEach(function (entry) {
+          var div = document.createElement('div');
+          div.className = 'backup-entry';
+          div.textContent = entry.time + '　' + (entry.op === 'import' ? '导入备份' : '下载备份') + '（' + entry.count + ' 份配方）';
+          backupLogList.appendChild(div);
+        });
+      }
+      function logBackup(op, count) {
+        backupLog.unshift({ time: fmtBackupTime(new Date()), op: op, count: count });
+        if (backupLog.length > 30) backupLog.length = 30;
+        renderBackupLog();
+      }
+      function validLogEntry(item) {
+        if (!item || typeof item.time !== 'string') return null;
+        if (item.op !== 'download' && item.op !== 'import') return null;
+        var count = Number(item.count);
+        if (!isFinite(count) || count < 0) return null;
+        return { time: item.time.slice(0, 32), op: item.op, count: Math.floor(count) };
+      }
       function renderRecords() {
         recordList.innerHTML = '';
         recordCount.textContent = recipeRecords.length ? recipeRecords.length + ' 份配方' : '还没有记录';
@@ -1633,7 +1676,8 @@
       });
       downloadRecords.addEventListener('click', function () {
         if (!recipeRecords.length) return;
-        var payload = JSON.stringify({ format: '取色器手动调色记录', version: 1, records: recipeRecords }, null, 2);
+        logBackup('download', recipeRecords.length);
+        var payload = JSON.stringify({ format: '取色器手动调色记录', version: 1, records: recipeRecords, backupLog: backupLog }, null, 2);
         var blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
         var url = URL.createObjectURL(blob);
         var link = document.createElement('a');
@@ -1660,6 +1704,15 @@
               if (!Array.isArray(source)) throw new Error('bad format');
               var imported = source.slice(0, 100).map(validImportedRecord).filter(Boolean);
               if (!imported.length) throw new Error('no records');
+              var importedLog = Array.isArray(parsed.backupLog) ? parsed.backupLog.map(validLogEntry).filter(Boolean) : [];
+              var seenKeys = {};
+              backupLog.forEach(function (e) { seenKeys[e.time + '|' + e.op + '|' + e.count] = 1; });
+              importedLog.forEach(function (e) {
+                var k = e.time + '|' + e.op + '|' + e.count;
+                if (!seenKeys[k]) { seenKeys[k] = 1; backupLog.push(e); }
+              });
+              if (backupLog.length > 30) backupLog.length = 30;
+              logBackup('import', imported.length);
               recipeRecords = imported.concat(recipeRecords);
               renderRecords();
               showToast('已导入 ' + imported.length + ' 份配方');
