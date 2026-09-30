@@ -9,7 +9,10 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Checkout      - name: Decode app icons
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Decode app icons
         run: |
           cd App/Assets.xcassets/AppIcon.appiconset
           python3 << 'EOF'
@@ -18,7 +21,6 @@ jobs:
               for name, b64 in json.load(open(f)).items():
                   open(name, 'wb').write(base64.b64decode(b64))
           EOF
-        uses: actions/checkout@v4
 
       - name: Install xcodegen
         run: brew install xcodegen
