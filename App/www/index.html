@@ -498,7 +498,9 @@
         <button class="case-filter-btn" type="button" data-brand="立邦">立邦</button>
         <button class="case-filter-btn" type="button" data-brand="三棵树">三棵树</button>
         <button class="case-filter-btn" type="button" data-brand="多乐士">多乐士</button>
+        <button class="case-filter-btn" type="button" data-brand="大师方案">大师方案</button>
       </div>
+      <div id="caseDbStatus" style="padding:8px 16px 0;font-size:12px;color:var(--tertiary)">正在连接在线案例库…</div>
       <div id="caseList"></div>
       <p class="section-note" style="padding:0 16px 8px">案例配色为品牌年度流行色系的参考搭配，点色块复制色号，"送去混色"可直接调配。</p>
       <div style="padding:0 16px 16px;display:flex;gap:8px;flex-wrap:wrap">
@@ -2295,6 +2297,86 @@
     var activeBrand = 'all';
     var currentPage = 0;
     var PAGE_SIZE = 5;
+    var caseDbStatus = document.getElementById('caseDbStatus');
+
+    function setDbStatus(text) {
+      if (caseDbStatus) caseDbStatus.textContent = text;
+    }
+
+    function validOnlineCase(c) {
+      if (!c || typeof c !== 'object') return null;
+      if (typeof c.name !== 'string' || !Array.isArray(c.colors) || c.colors.length < 2) return null;
+      var colors = c.colors.slice(0, 4).map(function (col) {
+        return { n: String(col.n || '').slice(0, 20), hex: String(col.hex || '').toUpperCase() };
+      }).filter(function (col) { return /^#[0-9A-F]{6}$/.test(col.hex); });
+      if (colors.length < 2) return null;
+      return {
+        brand: String(c.brand || '大师方案').slice(0, 20),
+        name: String(c.name).slice(0, 40),
+        space: String(c.space || '').slice(0, 40),
+        colors: colors
+      };
+    }
+
+    function applyCases(list, updated, online) {
+      var seen = {};
+      var merged = [];
+      list.forEach(function (c) {
+        var v = validOnlineCase(c);
+        if (!v) return;
+        var key = v.brand + '|' + v.name;
+        if (!seen[key]) { seen[key] = 1; merged.push(v); }
+      });
+      // 在线库优先，内置兜底补齐
+      CASES.forEach(function (c) {
+        var key = c.brand + '|' + c.name;
+        if (!seen[key]) { seen[key] = 1; merged.push(c); }
+      });
+      CASES = merged;
+      currentPage = 0;
+      renderCases();
+      setDbStatus(online
+        ? '在线案例库 · 更新于 ' + updated + ' · 共 ' + CASES.length + ' 套'
+        : '内置案例 · 离线模式 · 共 ' + CASES.length + ' 套');
+    }
+
+    function loadOnlineCases() {
+      // 先读本地缓存，秒开；再联网更新
+      try {
+        var cached = JSON.parse(localStorage.getItem('tuliap_case_db') || 'null');
+        if (cached && Array.isArray(cached.cases) && cached.cases.length) {
+          applyCases(cached.cases, cached.updated || '', false);
+          setDbStatus('本地缓存案例 · 共 ' + CASES.length + ' 套 · 正在联网更新…');
+        }
+      } catch (e) {}
+      var urls = [
+        'https://cdn.jsdelivr.net/gh/wozofa-ship-it/quseqi-ios@main/docs/cases.json',
+        'https://raw.githubusercontent.com/wozofa-ship-it/quseqi-ios/main/docs/cases.json'
+      ];
+      function tryFetch(i) {
+        if (i >= urls.length) {
+          if (!CASES.length || CASES.length <= 30) setDbStatus('内置案例 · 离线模式 · 共 ' + CASES.length + ' 套');
+          return;
+        }
+        var timer = setTimeout(function () { tryFetch(i + 1); }, 8000);
+        fetch(urls[i], { cache: 'no-store' }).then(function (resp) {
+          if (!resp.ok) throw new Error('http ' + resp.status);
+          return resp.json();
+        }).then(function (data) {
+          clearTimeout(timer);
+          if (data && Array.isArray(data.cases) && data.cases.length) {
+            try { localStorage.setItem('tuliap_case_db', JSON.stringify({ updated: data.updated || '', cases: data.cases })); } catch (e) {}
+            applyCases(data.cases, data.updated || '', true);
+          } else {
+            tryFetch(i + 1);
+          }
+        }).catch(function () {
+          clearTimeout(timer);
+          tryFetch(i + 1);
+        });
+      }
+      tryFetch(0);
+    }
 
     function copyText(text, done) {
       function fallback() {
@@ -2439,6 +2521,7 @@
     }
 
     renderCases();
+    loadOnlineCases();
   })();
   </script>
 </body>
