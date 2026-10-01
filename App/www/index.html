@@ -407,6 +407,20 @@
     .top10-bar { height: 100%; background: #0A84FF; border-radius: 2px; }
     .top10-pct { font-size: 13px; font-weight: 700; color: #0A84FF; flex-shrink: 0; }
     .top10-de { font-size: 11px; color: var(--tertiary); flex-shrink: 0; }
+    /* 配色页色号搜索 */
+    .scheme-search { margin-bottom: 16px; padding-bottom: 14px; border-bottom: .5px solid var(--separator); }
+    .search-row { display: flex; gap: 8px; }
+    .search-input { flex: 1; min-width: 0; font-size: 15px; padding: 10px 12px; border-radius: 10px; border: .5px solid var(--separator); background: var(--bg); color: var(--text); }
+    .search-input:focus { outline: none; border-color: #0A84FF; }
+    .search-btn { flex-shrink: 0; font-size: 15px; font-weight: 600; color: #fff; background: #0A84FF; border: none; border-radius: 10px; padding: 10px 16px; }
+    .search-btn:active { opacity: .75; }
+    .search-result { margin-top: 14px; }
+    .search-color-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .search-swatch { width: 44px; height: 44px; border-radius: 10px; border: .5px solid var(--separator); flex-shrink: 0; }
+    .search-color-info { flex: 1; min-width: 0; }
+    .search-code { font-size: 16px; font-weight: 700; }
+    .search-meta { font-size: 12px; color: var(--secondary); margin-top: 2px; }
+    .search-official { flex-shrink: 0; font-size: 13px; color: #0A84FF; background: none; border: none; padding: 6px 4px; }
     .advice-list { counter-reset: adv; }
     .advice-list li::before { content: counter(adv); counter-increment: adv; }
 
@@ -499,6 +513,33 @@
     </div>
     <div class="tab-panel" id="tab-palette">
       <div class="palette-card">
+        <section class="scheme-search" aria-label="色号搜索">
+          <div class="search-row">
+            <input id="schemeSearchInput" class="search-input" type="text" placeholder="输入立邦色号或名字，如 OA1700-1 / 玉兰花" autocomplete="off" />
+            <button id="schemeSearchBtn" class="search-btn" type="button">查看配色</button>
+          </div>
+          <div id="schemeSearchResult" class="search-result" hidden>
+            <div class="search-color-head">
+              <span class="search-swatch" id="searchSwatch"></span>
+              <div class="search-color-info">
+                <div class="search-code" id="searchCode">—</div>
+                <div class="search-meta" id="searchMeta">—</div>
+              </div>
+              <button class="search-official" id="searchOfficialBtn" type="button" hidden>官网查看 ↗</button>
+            </div>
+            <div class="ratio-strip" aria-label="配色使用比例">
+              <span class="ratio-color" data-ratio="60" id="searchRatioMain"></span>
+              <span class="ratio-color" data-ratio="30" id="searchRatioSupport"></span>
+              <span class="ratio-color" data-ratio="10" id="searchRatioAccent"></span>
+            </div>
+            <div class="ratio-list">
+              <div class="ratio-item"><span class="ratio-dot" id="searchDotMain"></span><b>60%</b><span>主色</span><code id="searchMainHex">—</code></div>
+              <div class="ratio-item"><span class="ratio-dot" id="searchDotSupport"></span><b>30%</b><span>辅色</span><code id="searchSupportHex">—</code></div>
+              <div class="ratio-item"><span class="ratio-dot" id="searchDotAccent"></span><b>10%</b><span>点缀</span><code id="searchAccentHex">—</code></div>
+            </div>
+            <button class="copy-palette" id="copySearchPalette" type="button">复制该配色与比例</button>
+          </div>
+        </section>
         <section class="palette-result" aria-label="配色方案">
               <div class="palette-heading">
                 <strong>配色方案</strong>
@@ -1100,9 +1141,9 @@
         return '#' + values.map(function (value) { return componentToHex(Math.round((value + m) * 255)); }).join('');
       }
 
-      function buildPalette() {
-        if (!hasSample) return;
-        var hsl = rgbToHsl(currentSample);
+      // 根据一个 HEX 算出 60/30/10 配色（不碰全局状态，供搜索复用）
+      function computeScheme(hex) {
+        var hsl = rgbToHsl(hexToRgb(hex));
         var h = hsl[0], s = hsl[1], l = hsl[2];
         var support, accent;
         if (activeScheme === 'tonal') {
@@ -1115,7 +1156,12 @@
           support = hslToHex(h + 32, Math.max(14, s * .55), Math.min(88, Math.max(66, l + 18)));
           accent = hslToHex(h + 180, Math.max(42, s * .9), Math.max(34, Math.min(54, 92 - l)));
         }
-        currentPalette = [currentHex, support, accent];
+        return [hex, support, accent];
+      }
+
+      function buildPalette() {
+        if (!hasSample) return;
+        currentPalette = computeScheme(currentHex);
         ratioMain.style.backgroundColor = currentPalette[0];
         ratioSupport.style.backgroundColor = currentPalette[1];
         ratioAccent.style.backgroundColor = currentPalette[2];
@@ -1882,12 +1928,91 @@
           activeScheme = button.getAttribute('data-scheme') || 'balanced';
           schemeTabs.forEach(function (item) { item.classList.toggle('active', item === button); });
           buildPalette();
+          if (searchColorObj) renderSearchPalette();
         });
       });
       copyPalette.addEventListener('click', function () {
         if (!currentPalette) return;
         var styleName = activeScheme === 'tonal' ? '同色' : (activeScheme === 'contrast' ? '对比' : '协调');
         copyText('配色方案（' + styleName + '）\n主色 60%：' + currentPalette[0] + '\n辅色 30%：' + currentPalette[1] + '\n点缀 10%：' + currentPalette[2], '配色方案已复制');
+      });
+      // 配色页：色号搜索 → 显示该色号的 60/30/10 配色
+      var schemeSearchInput = document.getElementById('schemeSearchInput');
+      var schemeSearchBtn = document.getElementById('schemeSearchBtn');
+      var schemeSearchResult = document.getElementById('schemeSearchResult');
+      var searchPalette = null;
+      var searchCode = '';
+      var searchColorObj = null;
+      function findNipponByQuery(query) {
+        query = (query || '').trim();
+        if (!query) return null;
+        var upper = query.toUpperCase();
+        var i, color;
+        for (i = 0; i < nipponPalette.length; i += 1) {
+          if (nipponPalette[i].code.toUpperCase() === upper) return nipponPalette[i];
+        }
+        if (window.NIPPON_NAME_MAP) {
+          for (var code in window.NIPPON_NAME_MAP) {
+            if (window.NIPPON_NAME_MAP[code] === query) {
+              for (i = 0; i < nipponPalette.length; i += 1) {
+                if (nipponPalette[i].code === code) return nipponPalette[i];
+              }
+            }
+          }
+        }
+        for (i = 0; i < nipponPalette.length; i += 1) {
+          if (nipponPalette[i].code.toUpperCase().indexOf(upper) === 0) return nipponPalette[i];
+        }
+        return null;
+      }
+      function renderSearchPalette() {
+        if (!searchPalette) return;
+        var scheme = computeScheme(searchPalette[0]);
+        var styleName = activeScheme === 'tonal' ? '同色' : (activeScheme === 'contrast' ? '对比' : '协调');
+        var color = searchColorObj;
+        var name = nipponNameFor(color.code);
+        document.getElementById('searchSwatch').style.backgroundColor = color.hex;
+        document.getElementById('searchCode').textContent = color.code + (name ? ' · ' + name : '');
+        document.getElementById('searchMeta').textContent = color.hex.toUpperCase() + ' · ' + styleName + '风格';
+        var officialBtn = document.getElementById('searchOfficialBtn');
+        if (name) {
+          officialBtn.hidden = false;
+          officialBtn.onclick = function () { openNipponColor(color.code); };
+        } else {
+          officialBtn.hidden = true;
+        }
+        document.getElementById('searchRatioMain').style.backgroundColor = scheme[0];
+        document.getElementById('searchRatioSupport').style.backgroundColor = scheme[1];
+        document.getElementById('searchRatioAccent').style.backgroundColor = scheme[2];
+        document.getElementById('searchDotMain').style.backgroundColor = scheme[0];
+        document.getElementById('searchDotSupport').style.backgroundColor = scheme[1];
+        document.getElementById('searchDotAccent').style.backgroundColor = scheme[2];
+        document.getElementById('searchMainHex').textContent = scheme[0];
+        document.getElementById('searchSupportHex').textContent = scheme[1];
+        document.getElementById('searchAccentHex').textContent = scheme[2];
+        schemeSearchResult.hidden = false;
+      }
+      function doSchemeSearch() {
+        var color = findNipponByQuery(schemeSearchInput.value);
+        if (!color) {
+          showToast('未找到该色号，换个色号或名字试试');
+          return;
+        }
+        searchColorObj = color;
+        searchCode = color.code;
+        searchPalette = [color.hex];
+        renderSearchPalette();
+      }
+      schemeSearchBtn.addEventListener('click', doSchemeSearch);
+      schemeSearchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); doSchemeSearch(); }
+      });
+      document.getElementById('copySearchPalette').addEventListener('click', function () {
+        if (!searchColorObj || !searchPalette) return;
+        var scheme = computeScheme(searchPalette[0]);
+        var styleName = activeScheme === 'tonal' ? '同色' : (activeScheme === 'contrast' ? '对比' : '协调');
+        var name = nipponNameFor(searchColorObj.code);
+        copyText(searchColorObj.code + (name ? '·' + name : '') + ' 配色方案（' + styleName + '）\n主色 60%：' + scheme[0] + '\n辅色 30%：' + scheme[1] + '\n点缀 10%：' + scheme[2], '配色方案已复制');
       });
       addTint.addEventListener('click', function () { addTintRow(); });
       baseAmount.addEventListener('input', updateRatioPreview);
