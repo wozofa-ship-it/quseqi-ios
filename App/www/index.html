@@ -164,7 +164,10 @@
     }
     .nippon-code { font-size: 17px; font-weight: 700; }
     .nippon-hex { font-size: 14px; color: var(--tertiary); font-family: ui-monospace, monospace; margin-left: auto; }
-    .candidate-list { font-size: 13px; color: var(--tertiary); margin: 10px 0 0; line-height: 1.6; }
+    .candidate-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; font-size: 13px; color: var(--secondary); }
+    .candidate-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--bg); border-radius: 8px; padding: 6px 10px 6px 6px; cursor: pointer; }
+    .candidate-chip:active { opacity: .6; }
+    .candidate-swatch { width: 22px; height: 22px; border-radius: 6px; border: .5px solid var(--separator); flex-shrink: 0; }
     .library-status { font-size: 12px; color: var(--tertiary); margin: 6px 0 0; }
 
     /* 配色方案 */
@@ -378,7 +381,7 @@
                 <span class="nippon-code" id="nipponCode">等待取色</span>
                 <span class="nippon-hex" id="nipponHex">—</span>
               </div>
-              <p class="candidate-list" id="candidateList">取色后显示另外两个相近色号</p>
+              <p class="candidate-list" id="candidateList">取色后显示另外四个相近色号，点选可切换</p>
               <p class="library-status" id="libraryStatus">正在准备内置色卡…</p>
             </section>
             
@@ -668,6 +671,14 @@
         return Math.sqrt(lTerm * lTerm + cTerm * cTerm + hTerm * hTerm + rt * cTerm * hTerm);
       }
 
+      function deltaQuality(de) {
+        if (de < 1) return '几乎一致';
+        if (de < 2) return '非常接近';
+        if (de < 5) return '接近';
+        if (de < 10) return '有差异';
+        return '差异较大';
+      }
+
       function updateNipponMatch() {
         if (!hasSample || !nipponPalette.length) return;
         var lab = rgbToLab(currentSample);
@@ -683,7 +694,7 @@
             }
           }
           if (!inserted) closest.push(item);
-          if (closest.length > 3) closest.pop();
+          if (closest.length > 5) closest.pop();
         });
         if (!closest.length) return;
         var best = closest[0];
@@ -691,10 +702,27 @@
         nipponCode.textContent = best.color.code;
         nipponHex.textContent = best.color.hex;
         nipponColor.style.backgroundColor = best.color.hex;
-        matchDistance.textContent = '色差 ΔE ' + best.distance.toFixed(1);
-        candidateList.innerHTML = closest.slice(1).map(function (item) {
-          return '<code>' + item.color.code + '</code> · ΔE ' + item.distance.toFixed(1);
-        }).join('　');
+        matchDistance.textContent = 'ΔE ' + best.distance.toFixed(1) + ' · ' + deltaQuality(best.distance);
+        candidateList.innerHTML = '';
+        closest.slice(1).forEach(function (item) {
+          var wrap = document.createElement('span');
+          wrap.className = 'candidate-chip';
+          var sw = document.createElement('span');
+          sw.className = 'candidate-swatch';
+          sw.style.backgroundColor = item.color.hex;
+          var label = document.createElement('span');
+          label.textContent = item.color.code + ' ΔE' + item.distance.toFixed(1);
+          wrap.appendChild(sw);
+          wrap.appendChild(label);
+          wrap.addEventListener('click', function () {
+            currentNipponCode = item.color.code;
+            nipponCode.textContent = item.color.code;
+            nipponHex.textContent = item.color.hex;
+            nipponColor.style.backgroundColor = item.color.hex;
+            matchDistance.textContent = 'ΔE ' + item.distance.toFixed(1) + ' · ' + deltaQuality(item.distance);
+          });
+          candidateList.appendChild(wrap);
+        });
       }
 
       function loadNipponPalette() {
@@ -1092,7 +1120,10 @@
         var pixels = sampleCtx.getImageData(0, 0, size, size).data;
         var colors = [];
         for (var i = 0; i < pixels.length; i += 4) {
-          if (pixels[i + 3] > 8) colors.push([pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3] / 255]);
+          if (pixels[i + 3] > 8) {
+            var pi = i / 4;
+            colors.push([pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3] / 255, pi % size, Math.floor(pi / size)]);
+          }
         }
         if (!colors.length) return null;
         if (colors.length === 1) return colors[0].slice(0, 3);
@@ -1107,12 +1138,17 @@
           return ad - bd;
         });
         var keep = Math.max(1, Math.ceil(colors.length * .8));
+        // 高斯中心加权：离取样中心越近权重越高，边缘噪点影响更小
+        var sigma = size / 3;
         var red = 0, green = 0, blue = 0, weight = 0;
         for (var j = 0; j < keep; j += 1) {
-          red += colors[j][0] * colors[j][3];
-          green += colors[j][1] * colors[j][3];
-          blue += colors[j][2] * colors[j][3];
-          weight += colors[j][3];
+          var px = colors[j][4] - half, py = colors[j][5] - half;
+          var gauss = Math.exp(-(px * px + py * py) / (2 * sigma * sigma));
+          var w = colors[j][3] * gauss;
+          red += colors[j][0] * w;
+          green += colors[j][1] * w;
+          blue += colors[j][2] * w;
+          weight += w;
         }
         return [Math.round(red / weight), Math.round(green / weight), Math.round(blue / weight)];
       }
