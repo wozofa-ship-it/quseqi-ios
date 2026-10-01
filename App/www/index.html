@@ -389,8 +389,10 @@
       flex: 1; border: none; background: none; color: var(--tertiary);
       display: flex; flex-direction: column; align-items: center; gap: 3px;
       padding: 8px 0 8px; font-size: 10px; font-weight: 500;
-      position: relative; overflow: hidden; border-radius: 16px; margin: 4px 2px;
-      transition: all .25s cubic-bezier(.2,.7,.3,1);
+      position: relative; border-radius: 16px; margin: 4px 2px;
+      transition: transform .15s ease, background .25s ease;
+      overflow: hidden;
+      max-height: 64px;
     }
     .tab-btn svg { width: 25px; height: 25px; position: relative; z-index: 2; }
     .tab-btn span, .tab-btn { position: relative; z-index: 2; }
@@ -561,6 +563,17 @@
       position: relative; overflow: hidden;
     }
     .top10-copy-btn:active { transform: scale(.94); }
+    /* AI 方案 */
+    .ai-solution { margin-top: 12px; padding: 14px; background: var(--bg); border-radius: 14px; border: .5px solid var(--separator); }
+    .ai-solution-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .ai-solution-head strong { font-size: 15px; }
+    .ai-sec { margin-bottom: 12px; }
+    .ai-sec-title { font-size: 13px; font-weight: 700; color: #0A84FF; margin-bottom: 4px; }
+    .ai-sec-body { font-size: 13px; line-height: 1.8; color: var(--text); }
+    .ai-match-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .ai-match-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 10px; border-radius: 999px; background: var(--card); border: .5px solid var(--separator); }
+    .ai-match-dot { width: 16px; height: 16px; border-radius: 50%; border: .5px solid var(--separator); }
+    .ai-video-row { display: flex; gap: 8px; margin-top: 12px; }
     /* 取色历史 */
     .pick-history { margin-top: 12px; padding-top: 12px; border-top: .5px solid var(--separator); }
     .pick-history-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
@@ -714,6 +727,18 @@
               </div>
               <p class="candidate-list" id="candidateList">取色后显示另外四个相近色号，点选可切换</p>
               <button class="official-check" id="nipponOfficialBtn" type="button" hidden>在立邦官网查看该色号 ↗</button>
+              <button class="copy-palette" id="aiSolutionBtn" type="button" disabled style="margin-top:8px">🤖 AI 出配色方案</button>
+              <div class="ai-solution" id="aiSolution" hidden>
+                <div class="ai-solution-head">
+                  <strong>AI 配色方案</strong>
+                  <button class="pick-history-clear" id="aiSolutionClose" type="button">收起</button>
+                </div>
+                <div id="aiSolutionBody"></div>
+                <div class="ai-video-row">
+                  <button class="search-btn" id="aiVideoXhs" type="button" style="flex:1">小红书找视频教程</button>
+                  <button class="search-btn" id="aiVideoBili" type="button" style="flex:1">B站找视频教程</button>
+                </div>
+              </div>
               <div class="pick-history" id="pickHistory" hidden>
                 <div class="pick-history-head">
                   <strong>取色历史</strong>
@@ -1506,6 +1531,8 @@
         copyPalette.disabled = false;
         var saveBtn = document.getElementById('savePaletteRecord');
         if (saveBtn) saveBtn.disabled = false;
+        var aiBtn = document.getElementById('aiSolutionBtn');
+        if (aiBtn) aiBtn.disabled = false;
       }
 
       function updateRecipeTarget() {
@@ -2524,7 +2551,111 @@
           grid.appendChild(item);
         });
       }
-      // ---- 配色记录本 ----
+      // ---- AI 智能配色方案 ----
+      function analyzeColor(hex) {
+        var rgb = hexToRgb(hex);
+        var hsl = rgbToHsl(rgb);
+        var lab = rgbToLab(rgb);
+        var h = hsl[0], s = hsl[1], l = hsl[2];
+        // 色相家族
+        var family;
+        if (s < 12) family = '中性灰';
+        else if (h < 15 || h >= 345) family = '红';
+        else if (h < 45) family = '橙';
+        else if (h < 75) family = '黄';
+        else if (h < 160) family = '绿';
+        else if (h < 200) family = '青';
+        else if (h < 260) family = '蓝';
+        else if (h < 300) family = '紫';
+        else family = '玫红';
+        // 明度
+        var light = l >= 75 ? '浅' : (l >= 45 ? '中' : '深');
+        // 饱和度
+        var sat = s >= 60 ? '鲜艳' : (s >= 25 ? '柔和' : '低饱和');
+        // 冷暖 (Lab b*: 正偏黄暖，负偏蓝冷)
+        var warmth = lab[2] > 12 ? '暖' : (lab[2] < -8 ? '冷' : '中性');
+        return { h: h, s: s, l: l, lab: lab, family: family, light: light, sat: sat, warmth: warmth, hex: hex };
+      }
+      function aiSolution() {
+        if (!hasSample) { showToast('请先取色'); return; }
+        var a = analyzeColor(currentHex);
+        var body = document.getElementById('aiSolutionBody');
+        var code = currentNipponCode !== '—' ? currentNipponCode : '';
+        var cname = code ? nipponNameFor(code) : '';
+        // 1. 颜色诊断
+        var diag = '这是一个<b>' + a.warmth + a.sat + a.family + '色</b>（' + a.light + '色调）。';
+        if (a.family === '中性灰') diag += '百搭打底，靠软装出层次。';
+        else if (a.light === '深') diag += '深色显高级但压空间，小面积用或配浅色提亮。';
+        else if (a.light === '浅') diag += '浅色显大显亮，适合大面积铺。';
+        if (a.warmth === '暖') diag += '暖色温馨，适合客厅卧室。';
+        else if (a.warmth === '冷') diag += '冷色冷静，适合书房、卫生间。';
+        // 2. 适用空间
+        var rooms = [];
+        if (a.light === '浅' || a.family === '中性灰') rooms.push('客厅', '卧室');
+        if (a.warmth === '暖' && a.light !== '深') rooms.push('餐厅', '儿童房');
+        if (a.warmth === '冷') rooms.push('书房', '卫生间');
+        if (a.family === '绿' || a.family === '青') rooms.push('阳台');
+        if (!rooms.length) rooms.push('客厅', '卧室');
+        rooms = rooms.filter(function (v, i, arr) { return arr.indexOf(v) === i; }).slice(0, 4);
+        // 3. 搭配色号：从库里找同色系浅一号 + 对比色
+        var matches = [];
+        if (nipponPalette.length) {
+          var lab = a.lab;
+          var cands = nipponPalette.map(function (color) {
+            return { color: color, d: deltaE2000(lab, color.lab) };
+          });
+          // 同色系（色相接近）里找更浅的
+          var sameHue = cands.filter(function (c) {
+            var ch = rgbToHsl(hexToRgb(c.color.hex))[0];
+            var dh = Math.abs(ch - a.h);
+            dh = Math.min(dh, 360 - dh);
+            return dh < 25 && c.d > 3;
+          }).sort(function (x, y) { return x.d - y.d; }).slice(0, 3);
+          // 对比色（色相差 150-210）
+          var contrast = cands.filter(function (c) {
+            var ch = rgbToHsl(hexToRgb(c.color.hex))[0];
+            var dh = Math.abs(ch - a.h);
+            dh = Math.min(dh, 360 - dh);
+            return dh > 140 && dh < 220 && c.d > 15;
+          }).sort(function (x, y) { return x.d - y.d; }).slice(0, 3);
+          matches = sameHue.concat(contrast).slice(0, 5);
+        }
+        // 4. 施工建议
+        var tips = [];
+        if (a.light === '深') tips.push('深色至少刷两遍，每遍干透再刷下一遍，否则发花');
+        if (a.light === '浅') tips.push('浅色遮盖力弱，底漆务必刷匀');
+        if (a.s === undefined || a.sat === '鲜艳') tips.push('鲜艳色先刷小样上墙看三天，不同光线下差别大');
+        tips.push('同一面墙一次配够漆，分次调必有色差');
+        // 渲染
+        var html = '<div class="ai-sec"><div class="ai-sec-title">🔍 颜色诊断</div><div class="ai-sec-body">' + diag + '</div></div>';
+        html += '<div class="ai-sec"><div class="ai-sec-title">🏠 适用空间</div><div class="ai-sec-body">' + rooms.join(' · ') + '</div></div>';
+        if (matches.length) {
+          html += '<div class="ai-sec"><div class="ai-sec-title">🎨 搭配色号推荐</div><div class="ai-match-chips">';
+          matches.forEach(function (m) {
+            var mn = nipponNameFor(m.color.code);
+            html += '<span class="ai-match-chip"><span class="ai-match-dot" style="background:' + m.color.hex + '"></span>' +
+              m.color.code + (mn ? '·' + mn : '') + '</span>';
+          });
+          html += '</div><div class="ai-sec-body" style="margin-top:4px">点色号可去官网看，配色页搜色号能看 60/30/10 方案。</div></div>';
+        }
+        html += '<div class="ai-sec"><div class="ai-sec-title">🛠 施工建议</div><div class="ai-sec-body">• ' + tips.join('<br>• ') + '</div></div>';
+        body.innerHTML = html;
+        document.getElementById('aiSolution').hidden = false;
+        // 视频搜索词
+        var kw = (code ? code + (cname || '') : a.family + '色乳胶漆') + '刷漆教程';
+        document.getElementById('aiVideoXhs').onclick = function () {
+          var bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quSeQiOpenXiaohongshu;
+          if (bridge) bridge.postMessage(kw);
+          else openOfficial('https://www.baidu.com/s?wd=' + encodeURIComponent('site:xiaohongshu.com ' + kw));
+        };
+        document.getElementById('aiVideoBili').onclick = function () {
+          openOfficial('https://search.bilibili.com/all?keyword=' + encodeURIComponent(kw));
+        };
+      }
+      document.getElementById('aiSolutionBtn').addEventListener('click', aiSolution);
+      document.getElementById('aiSolutionClose').addEventListener('click', function () {
+        document.getElementById('aiSolution').hidden = true;
+      });
       var paletteRecords = [];
       function styleNameOf() {
         return activeScheme === 'tonal' ? '同色' : (activeScheme === 'contrast' ? '对比' : '协调');
@@ -2617,7 +2748,19 @@
       });
       // 液态点按效果：涟漪 + 果冻形变，挂到所有玻璃按钮上
       function attachLiquidPress() {
-        var btns = document.querySelectorAll('.copy-palette, .copy-all, .save-recipe, .mix-go, .search-btn, .save-palette-record, .scheme-tab, .note-cat-tab, .record-action, .tab-btn, .top10-copy-btn');
+        var btns = document.querySelectorAll('.copy-palette, .copy-all, .save-recipe, .mix-go, .search-btn, .save-palette-record, .scheme-tab, .note-cat-tab, .record-action, .top10-copy-btn');
+        // 低栏按钮单独轻量处理：只缩放，不加涟漪（避免玻璃背景被拉高）
+        var tabs = document.querySelectorAll('.tab-btn');
+        Array.prototype.forEach.call(tabs, function (btn) {
+          if (btn.__liquid) return;
+          btn.__liquid = true;
+          btn.addEventListener('pointerdown', function () {
+            btn.style.transform = 'scale(.92)';
+          });
+          ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+            btn.addEventListener(ev, function () { btn.style.transform = ''; });
+          });
+        });
         Array.prototype.forEach.call(btns, function (btn) {
           if (btn.__liquid) return;
           btn.__liquid = true;
