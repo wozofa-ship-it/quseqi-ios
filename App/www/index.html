@@ -174,7 +174,9 @@
     .mix-mode-btn { flex: 1; border: none; background: var(--bg); border-radius: 10px; padding: 10px; font-size: 14px; font-weight: 600; color: var(--secondary); }
     .mix-mode-btn.active { background: var(--accent); color: #fff; }
     .mix-slots { display: flex; gap: 12px; justify-content: center; margin-bottom: 16px; flex-wrap: wrap; }
-    .mix-slot { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .mix-slot { display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; }
+    .mix-slot-del { position: absolute; top: -6px; right: calc(50% - 42px); width: 22px; height: 22px; border-radius: 50%; background: var(--danger); color: #fff; border: none; font-size: 14px; line-height: 1; display: none; z-index: 2; }
+    .mix-slot.has-color .mix-slot-del { display: block; }
     .mix-circle { width: 72px; height: 72px; border-radius: 50%; border: 2px dashed var(--separator); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--tertiary); text-align: center; line-height: 1.4; cursor: pointer; position: relative; overflow: hidden; -webkit-tap-highlight-color: transparent; }
     .mix-circle.filled { border-style: solid; border-color: transparent; }
     .mix-circle input[type=color] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
@@ -522,6 +524,56 @@
           <div class="backup-log" aria-label="备份记录">
             <h3>备份记录</h3>
             <div id="backupLogList"><div class="backup-empty">暂无备份记录，下载或导入记录后会记在这里。</div></div>
+          </div>
+        </section>
+      <section class="notebook-panel" aria-labelledby="siteHeading" style="margin-top:12px">
+          <div class="records-head">
+            <div>
+              <h2 id="siteHeading">工地尺寸记录</h2>
+              <p class="section-note" id="siteCount">还没有工地</p>
+            </div>
+          </div>
+          <div class="recipe-form" style="padding-top:0">
+            <label class="field-label" for="siteName">工地名字</label>
+            <input class="field-input" id="siteName" type="text" maxlength="40" placeholder="例如：阳光小区3栋1201" style="margin-bottom:10px">
+            <div class="base-grid" style="grid-template-columns:1fr 1fr">
+              <div>
+                <label class="field-label" for="dimCategory">类别</label>
+                <select class="field-select" id="dimCategory">
+                  <option value="墙面">墙面</option>
+                  <option value="门">门</option>
+                  <option value="窗">窗</option>
+                  <option value="床">床</option>
+                  <option value="柜子">柜子</option>
+                  <option value="天花板">天花板</option>
+                  <option value="地面">地面</option>
+                  <option value="其他">其他</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label" for="dimName">名称/位置</label>
+                <input class="field-input" id="dimName" type="text" maxlength="30" placeholder="例如：主卧东墙">
+              </div>
+            </div>
+            <div class="base-grid" style="grid-template-columns:1fr 1fr 1fr;margin-top:10px">
+              <div>
+                <label class="field-label" for="dimLength">长 (米)</label>
+                <input class="field-input" id="dimLength" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0">
+              </div>
+              <div>
+                <label class="field-label" for="dimWidth">宽 (米)</label>
+                <input class="field-input" id="dimWidth" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0">
+              </div>
+              <div>
+                <label class="field-label" for="dimHeight">高 (米)</label>
+                <input class="field-input" id="dimHeight" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0">
+              </div>
+            </div>
+            <p class="ratio-preview" id="dimPreview">填写尺寸后自动算面积。</p>
+            <button class="mix-go" id="saveDim" type="button" style="margin-top:10px">保存这条尺寸</button>
+          </div>
+          <div class="record-list" id="siteList">
+            <div class="record-empty" id="siteEmpty">先填工地名字，再一条条记录墙、门、窗、床等尺寸。</div>
           </div>
         </section>
       <section class="advice-panel" aria-labelledby="adviceHeading">
@@ -1033,6 +1085,122 @@
         if (backupLog.length > 30) backupLog.length = 30;
         renderBackupLog();
       }
+      /* 工地尺寸记录 */
+      var siteRecords = [];
+      var siteNameEl = document.getElementById('siteName');
+      var dimCategoryEl = document.getElementById('dimCategory');
+      var dimNameEl = document.getElementById('dimName');
+      var dimLengthEl = document.getElementById('dimLength');
+      var dimWidthEl = document.getElementById('dimWidth');
+      var dimHeightEl = document.getElementById('dimHeight');
+      var dimPreviewEl = document.getElementById('dimPreview');
+      var siteListEl = document.getElementById('siteList');
+      var siteEmptyEl = document.getElementById('siteEmpty');
+      var siteCountEl = document.getElementById('siteCount');
+      function dimArea(item) {
+        var l = Number(item.length) || 0, w = Number(item.width) || 0, h = Number(item.height) || 0;
+        // 墙面按 长×高，地面/天花板按 长×宽，其他取最大的两维相乘
+        if (item.category === '墙面') return l * h;
+        if (item.category === '地面' || item.category === '天花板') return l * w;
+        var dims = [l, w, h].sort(function (a, b) { return b - a; });
+        return dims[0] * dims[1];
+      }
+      function updateDimPreview() {
+        var l = Number(dimLengthEl.value) || 0, w = Number(dimWidthEl.value) || 0, h = Number(dimHeightEl.value) || 0;
+        if (!(l > 0) && !(w > 0) && !(h > 0)) {
+          dimPreviewEl.textContent = '填写尺寸后自动算面积。';
+          return;
+        }
+        var item = { category: dimCategoryEl.value, length: l, width: w, height: h };
+        var area = dimArea(item);
+        var parts = [];
+        if (l > 0) parts.push('长' + l + '米');
+        if (w > 0) parts.push('宽' + w + '米');
+        if (h > 0) parts.push('高' + h + '米');
+        dimPreviewEl.textContent = parts.join(' × ') + ' ≈ ' + area.toFixed(2) + '㎡';
+      }
+      [dimLengthEl, dimWidthEl, dimHeightEl, dimCategoryEl].forEach(function (el) {
+        if (el) {
+          el.addEventListener('input', updateDimPreview);
+          el.addEventListener('change', updateDimPreview);
+        }
+      });
+      function renderSiteRecords() {
+        siteListEl.innerHTML = '';
+        var totalArea = 0;
+        var sites = {};
+        siteRecords.forEach(function (rec) {
+          totalArea += dimArea(rec);
+          sites[rec.site] = true;
+        });
+        var siteNames = Object.keys(sites);
+        siteCountEl.textContent = siteRecords.length
+          ? siteNames.length + ' 个工地 · ' + siteRecords.length + ' 条 · 共约 ' + totalArea.toFixed(1) + '㎡'
+          : '还没有工地';
+        if (!siteRecords.length) {
+          siteListEl.appendChild(siteEmptyEl);
+          siteEmptyEl.style.display = '';
+          return;
+        }
+        siteEmptyEl.style.display = 'none';
+        siteRecords.forEach(function (rec, idx) {
+          var card = document.createElement('div');
+          card.className = 'record-item';
+          var head = document.createElement('div');
+          head.className = 'record-item-head';
+          var title = document.createElement('div');
+          var nm = document.createElement('div');
+          nm.className = 'record-name';
+          nm.textContent = rec.site + ' · ' + rec.category + (rec.name ? ' · ' + rec.name : '');
+          var meta = document.createElement('div');
+          meta.className = 'record-meta';
+          var parts = [];
+          if (rec.length > 0) parts.push('长' + rec.length + '米');
+          if (rec.width > 0) parts.push('宽' + rec.width + '米');
+          if (rec.height > 0) parts.push('高' + rec.height + '米');
+          meta.textContent = parts.join(' × ') + ' ≈ ' + dimArea(rec).toFixed(2) + '㎡';
+          title.appendChild(nm);
+          title.appendChild(meta);
+          head.appendChild(title);
+          var del = document.createElement('button');
+          del.type = 'button';
+          del.className = 'record-del';
+          del.textContent = '删除';
+          del.addEventListener('click', function () {
+            siteRecords.splice(idx, 1);
+            renderSiteRecords();
+            autoBackupRecords();
+          });
+          head.appendChild(del);
+          card.appendChild(head);
+          siteListEl.appendChild(card);
+        });
+      }
+      var saveDimBtn = document.getElementById('saveDim');
+      if (saveDimBtn) {
+        saveDimBtn.addEventListener('click', function () {
+          var site = siteNameEl.value.trim();
+          if (!site) { showToast('请先填工地名字'); siteNameEl.focus(); return; }
+          var l = Number(dimLengthEl.value) || 0, w = Number(dimWidthEl.value) || 0, h = Number(dimHeightEl.value) || 0;
+          if (!(l > 0) && !(w > 0) && !(h > 0)) { showToast('请至少填一个尺寸'); return; }
+          siteRecords.unshift({
+            site: site,
+            category: dimCategoryEl.value,
+            name: dimNameEl.value.trim(),
+            length: l, width: w, height: h,
+            createdAt: new Date().toISOString()
+          });
+          dimNameEl.value = '';
+          dimLengthEl.value = '';
+          dimWidthEl.value = '';
+          dimHeightEl.value = '';
+          updateDimPreview();
+          renderSiteRecords();
+          autoBackupRecords();
+          showToast('尺寸已保存');
+        });
+      }
+      renderSiteRecords();
       function validLogEntry(item) {
         if (!item || typeof item.time !== 'string') return null;
         if (item.op !== 'download' && item.op !== 'import') return null;
@@ -1435,8 +1603,8 @@
       });
       // 自动备份：保存配方后静默写入本机 涂料配色/调色记录-自动备份.json
       function autoBackupRecords() {
-        if (!recipeRecords.length) return;
-        var payload = JSON.stringify({ format: '涂料配色手动调色记录', version: 1, mode: 'auto', records: recipeRecords, backupLog: backupLog }, null, 2);
+        if (!recipeRecords.length && !siteRecords.length) return;
+        var payload = JSON.stringify({ format: '涂料配色手动调色记录', version: 2, mode: 'auto', records: recipeRecords, backupLog: backupLog, siteRecords: siteRecords }, null, 2);
         var bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quSeQiBackup;
         if (bridge) bridge.postMessage(payload);
       }
@@ -1489,6 +1657,16 @@
               logBackup('import', imported.length);
               recipeRecords = imported.concat(recipeRecords);
               renderRecords();
+              // 导入工地尺寸记录
+              if (Array.isArray(parsed.siteRecords)) {
+                var importedSites = parsed.siteRecords.filter(function (r) {
+                  return r && typeof r.site === 'string' && typeof r.category === 'string';
+                }).slice(0, 200);
+                if (importedSites.length) {
+                  siteRecords = importedSites.concat(siteRecords);
+                  renderSiteRecords();
+                }
+              }
               showToast('已导入 ' + imported.length + ' 份配方');
             } catch (error) {
               showToast('无法识别这份记录文件');
@@ -1609,7 +1787,19 @@
       for (var i = 0; i < slotCount; i++) {
         (function (idx) {
           var wrap = document.createElement('div');
-          wrap.className = 'mix-slot';
+          wrap.className = 'mix-slot' + (slotColors[idx] ? ' has-color' : '');
+          // 单个删除按钮
+          var delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.className = 'mix-slot-del';
+          delBtn.textContent = '×';
+          delBtn.setAttribute('aria-label', '删除第' + (idx + 1) + '种颜色');
+          delBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            slotColors[idx] = null;
+            renderSlots();
+          });
+          wrap.appendChild(delBtn);
           var circle = document.createElement('div');
           circle.className = 'mix-circle' + (slotColors[idx] ? ' filled' : '');
           if (slotColors[idx]) {
