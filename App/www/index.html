@@ -120,7 +120,7 @@
     .choose-btn.primary { background: var(--accent); color: #fff; }
     .choose-btn.primary:active { background: var(--accent-tap); }
     .canvas-wrap { position: relative; }
-    .canvas-wrap canvas { display: block; width: 100%; touch-action: none; }
+    .canvas-wrap canvas { display: block; width: 100%; touch-action: pan-y; }
     .target {
       position: absolute; width: 28px; height: 28px; border: 3px solid #fff;
       border-radius: 50%; box-shadow: 0 0 0 1.5px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.3);
@@ -1542,6 +1542,12 @@
       }
 
       function openImagePicker(useCamera) {
+        // App 内走原生相机/相册（中文系统 UI），浏览器里降级用 file input
+        var bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quSeQiPickImage;
+        if (bridge) {
+          bridge.postMessage(useCamera ? 'camera' : 'library');
+          return;
+        }
         var input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
@@ -1552,6 +1558,43 @@
         }, { once: true });
         input.click();
       }
+
+      // 原生选择器回传的图片（dataURL）
+      function loadImageFromDataUrl(dataUrl, name) {
+        var img = new Image();
+        img.onload = function () {
+          sourceImage = img;
+          var maxEdge = 4096;
+          var scale = Math.min(1, maxEdge / Math.max(img.naturalWidth, img.naturalHeight));
+          canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          emptyState.hidden = true;
+          canvasWrap.classList.add('ready');
+          fileName.textContent = name || '已拍摄的照片';
+          hasImage = true;
+          whiteBalance = [1, 1, 1];
+          calibrationPending = false;
+          calibrationActive = false;
+          calibrateBtn.disabled = false;
+          calibrateBtn.classList.remove('pending');
+          calibrateBtn.textContent = '校准白平衡';
+          copyHex.disabled = false;
+          copyRgb.disabled = false;
+          requestAnimationFrame(function () {
+            var rect = canvas.getBoundingClientRect();
+            pickAt(rect.left + rect.width / 2, rect.top + rect.height / 2);
+          });
+        };
+        img.onerror = function () {
+          showToast('无法读取这张图片');
+        };
+        img.src = dataUrl;
+      }
+      window.quSeQiImageResult = function (dataUrl) {
+        if (dataUrl) loadImageFromDataUrl(dataUrl, '照片');
+      };
 
       function copyText(text, successMessage) {
         if (navigator.clipboard && window.isSecureContext) {
@@ -1609,13 +1652,50 @@
         calibrateBtn.textContent = calibrationPending ? '请点白色或中性灰区域' : '校准白平衡';
         if (calibrationPending) showToast('下一次点击将设为中性白/灰');
       });
+      // 取色：点一下取色，长按 0.35 秒后拖动连续取色，普通滑动不受影响
+      var pressTimer = null, pressPicking = false, pressStartX = 0, pressStartY = 0;
       canvas.addEventListener('pointerdown', function (event) {
-        event.preventDefault();
-        pickAt(event.clientX, event.clientY);
+        pressStartX = event.clientX;
+        pressStartY = event.clientY;
+        pressPicking = false;
+        if (pressTimer) clearTimeout(pressTimer);
+        (function (x, y) {
+          pressTimer = setTimeout(function () {
+            pressTimer = null;
+            pressPicking = true;
+            canvas.style.touchAction = 'none';
+            pickAt(x, y);
+          }, 350);
+        })(event.clientX, event.clientY);
       });
       canvas.addEventListener('pointermove', function (event) {
-        if (event.pointerType === 'mouse' && event.buttons === 1) pickAt(event.clientX, event.clientY);
-      });
+        if (event.pointerType === 'mouse') {
+          if (event.buttons === 1) pickAt(event.clientX, event.clientY);
+          return;
+        }
+        if (pressTimer && !pressPicking) {
+          // 长按计时中移动超过阈值：判定为滑动，取消长按
+          var dx = event.clientX - pressStartX, dy = event.clientY - pressStartY;
+          if (dx * dx + dy * dy > 120) {
+            clearTimeout(pressTimer);
+            pressTimer = null;
+          }
+        } else if (pressPicking) {
+          event.preventDefault();
+          pickAt(event.clientX, event.clientY);
+        }
+      }, { passive: false });
+      function endPressPick(event) {
+        if (pressTimer) {
+          clearTimeout(pressTimer);
+          pressTimer = null;
+          if (!pressPicking && event && event.clientX !== undefined) pickAt(event.clientX, event.clientY);
+        }
+        pressPicking = false;
+        canvas.style.touchAction = '';
+      }
+      canvas.addEventListener('pointerup', endPressPick);
+      canvas.addEventListener('pointercancel', function () { endPressPick(null); });
       copyHex.addEventListener('click', function () { copyText(currentHex, 'HEX 已复制'); });
       copyRgb.addEventListener('click', function () { copyText(currentRgb, 'RGB 已复制'); });
       schemeTabs.forEach(function (button) {
