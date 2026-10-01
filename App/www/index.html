@@ -230,6 +230,8 @@
     .add-tint { border: none; background: none; color: var(--accent); font-size: 14px; font-weight: 600; }
     .tint-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
     .tint-row input { flex: 1; border: none; background: var(--card); border-radius: 8px; padding: 10px; font-size: 14px; color: var(--text); min-width: 0; }
+    .tint-row select { flex: 1; border: none; background: var(--card); border-radius: 8px; padding: 10px; font-size: 14px; color: var(--text); min-width: 0; }
+    .tint-row select.tint-unit { flex: 0 0 64px; }
     .tint-remove { border: none; background: none; color: var(--danger); font-size: 18px; padding: 6px; }
     .ratio-preview { font-size: 13px; color: var(--tertiary); margin: 8px 0 0; line-height: 1.5; }
     .records-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 16px 0; }
@@ -780,13 +782,48 @@
         row.className = 'tint-row';
         var order = document.createElement('span');
         order.className = 'tint-order';
+        // 色浆种类：下拉点选，免打字；选"自定义…"再手动输入
+        var commonTints = ['红色浆', '黄色浆', '蓝色浆', '绿色浆', '黑色浆', '白色浆', '紫色浆', '橙色浆', '棕色浆', '灰色浆'];
+        var nameSelect = document.createElement('select');
+        nameSelect.className = 'field-select tint-name';
+        nameSelect.setAttribute('aria-label', '色浆种类');
+        var emptyOpt = document.createElement('option');
+        emptyOpt.value = '';
+        emptyOpt.textContent = '选色浆';
+        nameSelect.appendChild(emptyOpt);
+        commonTints.forEach(function (t) {
+          var option = document.createElement('option');
+          option.value = t;
+          option.textContent = t;
+          if (t === values.name) option.selected = true;
+          nameSelect.appendChild(option);
+        });
+        var customOpt = document.createElement('option');
+        customOpt.value = '__custom__';
+        customOpt.textContent = '自定义…';
+        nameSelect.appendChild(customOpt);
         var nameInput = document.createElement('input');
-        nameInput.className = 'field-input tint-name';
+        nameInput.className = 'field-input tint-name-custom';
         nameInput.type = 'text';
         nameInput.maxLength = 30;
-        nameInput.placeholder = '色浆种类';
-        nameInput.value = values.name || '';
-        nameInput.setAttribute('aria-label', '色浆种类');
+        nameInput.placeholder = '输入色浆名';
+        nameInput.setAttribute('aria-label', '自定义色浆种类');
+        nameInput.style.display = 'none';
+        // 导入的自定义名称回填
+        if (values.name && commonTints.indexOf(values.name) === -1) {
+          customOpt.selected = true;
+          nameInput.value = values.name;
+          nameInput.style.display = '';
+          nameSelect.style.display = 'none';
+        }
+        nameSelect.addEventListener('change', function () {
+          if (nameSelect.value === '__custom__') {
+            nameSelect.style.display = 'none';
+            nameInput.style.display = '';
+            nameInput.focus();
+          }
+          updateRatioPreview();
+        });
         var amountInput = document.createElement('input');
         amountInput.className = 'field-input tint-amount';
         amountInput.type = 'number';
@@ -814,17 +851,21 @@
         remove.addEventListener('click', function () {
           if (tintList.children.length > 1) row.remove();
           else {
+            nameSelect.selectedIndex = 0;
+            nameSelect.style.display = '';
             nameInput.value = '';
+            nameInput.style.display = 'none';
             amountInput.value = '';
           }
           renumberTints();
           updateRatioPreview();
         });
-        [nameInput, amountInput, unitSelect].forEach(function (control) {
+        [nameSelect, nameInput, amountInput, unitSelect].forEach(function (control) {
           control.addEventListener('input', updateRatioPreview);
           control.addEventListener('change', updateRatioPreview);
         });
         row.appendChild(order);
+        row.appendChild(nameSelect);
         row.appendChild(nameInput);
         row.appendChild(amountInput);
         row.appendChild(unitSelect);
@@ -842,8 +883,11 @@
 
       function readTintRows() {
         return Array.prototype.map.call(tintList.querySelectorAll('.tint-row'), function (row) {
+          var sel = row.querySelector('.tint-name');
+          var custom = row.querySelector('.tint-name-custom');
+          var name = sel.value === '__custom__' ? custom.value.trim() : sel.value.trim();
           return {
-            name: row.querySelector('.tint-name').value.trim(),
+            name: name,
             amount: Number(row.querySelector('.tint-amount').value),
             unit: row.querySelector('.tint-unit').value
           };
