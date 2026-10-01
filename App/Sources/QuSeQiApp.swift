@@ -49,7 +49,7 @@ struct WebViewContainer: UIViewRepresentable {
         private func saveBackup(_ json: String) -> Bool {
             let fm = FileManager.default
             guard let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first else { return false }
-            let folder = docs.appendingPathComponent("取色器备份")
+            let folder = docs.appendingPathComponent("涂料配色备份")
             do {
                 try fm.createDirectory(at: folder, withIntermediateDirectories: true)
                 let fmt = DateFormatter()
