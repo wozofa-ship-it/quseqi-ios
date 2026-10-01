@@ -175,7 +175,7 @@
     .mix-mode-btn.active { background: var(--accent); color: #fff; }
     .mix-slots { display: flex; gap: 12px; justify-content: center; margin-bottom: 16px; flex-wrap: wrap; }
     .mix-slot { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-    .mix-circle { width: 72px; height: 72px; border-radius: 50%; border: 2px dashed var(--separator); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--tertiary); text-align: center; line-height: 1.4; cursor: pointer; position: relative; overflow: hidden; }
+    .mix-circle { width: 72px; height: 72px; border-radius: 50%; border: 2px dashed var(--separator); display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--tertiary); text-align: center; line-height: 1.4; cursor: pointer; position: relative; overflow: hidden; -webkit-tap-highlight-color: transparent; }
     .mix-circle.filled { border-style: solid; border-color: transparent; }
     .mix-circle input[type=color] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
     .mix-label { font-size: 13px; color: var(--secondary); font-weight: 600; }
@@ -1511,6 +1511,12 @@
       renderRecords();
       updateRecipeTarget();
       loadNipponPalette();
+      // 混色页签桥接：暴露给外部 script 用
+      window.__mixBridge = {
+        getCurrentHex: function () { return currentHex; },
+        setColor: setColor,
+        showToast: showToast
+      };
     }());
   </script>
 
@@ -1575,11 +1581,15 @@
           picker.type = 'color';
           picker.value = slotColors[idx] || '#808080';
           picker.setAttribute('aria-label', '选择第' + (idx + 1) + '种颜色');
+          picker.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0.01;pointer-events:none;';
           picker.addEventListener('input', function () {
             slotColors[idx] = picker.value.toUpperCase();
             renderSlots();
           });
           circle.appendChild(picker);
+          circle.addEventListener('click', function () {
+            try { picker.click(); } catch (e) { picker.focus(); }
+          });
           var label = document.createElement('div');
           label.className = 'mix-label';
           label.textContent = '第' + (idx + 1) + '种颜色';
@@ -1607,13 +1617,17 @@
     });
 
     mixUseCurrent.addEventListener('click', function () {
-      var cur = (typeof currentHex === 'string' && /^#[0-9A-Fa-f]{6}$/.test(currentHex)) ? currentHex.toUpperCase() : null;
-      if (!cur) { showToast('请先在取色页取色'); return; }
+      var bridge = window.__mixBridge;
+      var cur = (bridge && typeof bridge.getCurrentHex === 'function' && /^#[0-9A-Fa-f]{6}$/.test(bridge.getCurrentHex())) ? bridge.getCurrentHex().toUpperCase() : null;
+      if (!cur) {
+        if (bridge && bridge.showToast) bridge.showToast('请先在取色页取色');
+        return;
+      }
       var added = false;
       for (var i = 0; i < slotCount; i++) {
         if (!slotColors[i]) { slotColors[i] = cur; added = true; break; }
       }
-      if (!added) showToast('空位已满，可清空后重填');
+      if (!added && bridge && bridge.showToast) bridge.showToast('空位已满，可清空后重填');
       renderSlots();
     });
 
@@ -1645,9 +1659,10 @@
       mixResultInfo.innerHTML = '混合色 <code>' + mixed + '</code><br>RGB(' + rgb[0] + ', ' + rgb[1] + ', ' + rgb[2] + ')<br>' +
         colors.map(function (c, i) { return '第' + (i + 1) + '种 ' + c; }).join(' ＋ ') + '（等比）';
       // 同步到当前取色，方便加入记录本
-      if (typeof setColor === 'function') {
+      var bridge = window.__mixBridge;
+      if (bridge && typeof bridge.setColor === 'function') {
         var mrgb = hexToRgbArr(mixed);
-        setColor(mrgb[0], mrgb[1], mrgb[2]);
+        bridge.setColor(mrgb[0], mrgb[1], mrgb[2]);
       }
     });
 
