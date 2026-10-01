@@ -27,6 +27,7 @@ struct WebViewContainer: UIViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: "quSeQiOpenURL")
         configuration.userContentController.add(context.coordinator, name: "quSeQiPickImage")
         configuration.userContentController.add(context.coordinator, name: "quSeQiOpenWeChat")
+        configuration.userContentController.add(context.coordinator, name: "quSeQiSearchVideos")
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.scrollView.bounces = false
@@ -50,6 +51,11 @@ struct WebViewContainer: UIViewRepresentable {
                         UIApplication.shared.open(url, options: [:], completionHandler: nil)
                     }
                 }
+                return
+            }
+            if message.name == "quSeQiSearchVideos" {
+                let keyword = (message.body as? String) ?? ""
+                searchBilibili(keyword: keyword)
                 return
             }
             if message.name == "quSeQiPickImage" {
@@ -185,6 +191,59 @@ struct WebViewContainer: UIViewRepresentable {
                 if let image = object as? UIImage {
                     self?.sendImageToWeb(image)
                 }
+            }
+        }
+
+        // MARK: - B站配色视频搜索
+        private func searchBilibili(keyword: String) {
+            let kw = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !kw.isEmpty,
+                  let encoded = kw.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                  let url = URL(string: "https://api.bilibili.com/x/web-interface/search/type?search_type=video&keyword=\(encoded)&order=totalrank&page=1&pagesize=12") else {
+                sendVideosResult("[]")
+                return
+            }
+            var request = URLRequest(url: url, timeoutInterval: 15)
+            request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
+            request.setValue("https://www.bilibili.com", forHTTPHeaderField: "Referer")
+            URLSession.shared.dataTask(with: request) { [weak self] data, _, _ in
+                var videos: [[String: String]] = []
+                if let data = data,
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let dataObj = json["data"] as? [String: Any],
+                   let results = dataObj["result"] as? [[String: Any]] {
+                    for item in results.prefix(12) {
+                        guard let bvid = item["bvid"] as? String, !bvid.isEmpty else { continue }
+                        var title = (item["title"] as? String) ?? ""
+                        // 去掉 <em> 高亮标签
+                        title = title.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+                        var pic = (item["pic"] as? String) ?? ""
+                        if pic.hasPrefix("//") { pic = "https:" + pic }
+                        let author = (item["author"] as? String) ?? ""
+                        let duration = (item["duration"] as? String) ?? ""
+                        var play = ""
+                        if let stat = item["play"] {
+                            if let n = stat as? Int { play = n >= 10000 ? String(format: "%.1f万", Double(n) / 10000) : "\(n)" }
+                            else if let s = stat as? String { play = s }
+                        }
+                        videos.append(["bvid": bvid, "title": title, "pic": pic, "author": author, "duration": duration, "play": play])
+                    }
+                }
+                if let jsonData = try? JSONSerialization.data(withJSONObject: videos),
+                   let jsonStr = String(data: jsonData, encoding: .utf8) {
+                    self?.sendVideosResult(jsonStr)
+                } else {
+                    self?.sendVideosResult("[]")
+                }
+            }.resume()
+        }
+
+        private func sendVideosResult(_ jsonStr: String) {
+            let escaped = jsonStr.replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "'", with: "\\'")
+            let js = "window.quSeQiVideosResult && window.quSeQiVideosResult('\(escaped)')"
+            DispatchQueue.main.async { [weak self] in
+                self?.webView?.evaluateJavaScript(js, completionHandler: nil)
             }
         }
 
