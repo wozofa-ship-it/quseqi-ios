@@ -1,5 +1,6 @@
 import SwiftUI
 import WebKit
+import PhotosUI
 
 @main
 struct QuSeQiApp: App {
@@ -24,6 +25,7 @@ struct WebViewContainer: UIViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: "quSeQiListBackups")
         configuration.userContentController.add(context.coordinator, name: "quSeQiRestoreBackup")
         configuration.userContentController.add(context.coordinator, name: "quSeQiOpenURL")
+        configuration.userContentController.add(context.coordinator, name: "quSeQiPickImage")
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.scrollView.bounces = false
@@ -37,10 +39,17 @@ struct WebViewContainer: UIViewRepresentable {
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 
-    class Coordinator: NSObject, WKScriptMessageHandler {
+    class Coordinator: NSObject, WKScriptMessageHandler, UIImagePickerControllerDelegate, UINavigationControllerDelegate, PHPickerViewControllerDelegate {
         weak var webView: WKWebView?
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "quSeQiPickImage" {
+                let source = (message.body as? String) ?? "library"
+                DispatchQueue.main.async { [weak self] in
+                    self?.presentNativeImagePicker(source: source)
+                }
+                return
+            }
             if message.name == "quSeQiOpenURL" {
                 if let urlStr = message.body as? String, let url = URL(string: urlStr),
                    ["http", "https"].contains(url.scheme?.lowercased() ?? "") {
@@ -119,6 +128,75 @@ struct WebViewContainer: UIViewRepresentable {
             let safeName = URL(fileURLWithPath: filename).lastPathComponent
             let url = folder.appendingPathComponent(safeName)
             return try? String(contentsOf: url, encoding: .utf8)
+        }
+
+        // MARK: - 原生图片选择（拍照 / 相册）
+        private func topViewController() -> UIViewController? {
+            var responder: UIResponder? = webView
+            while responder != nil {
+                if let vc = responder as? UIViewController { return vc }
+                responder = responder?.next
+            }
+            return webView?.window?.rootViewController
+        }
+
+        private func presentNativeImagePicker(source: String) {
+            guard let vc = topViewController() else { return }
+            if source == "camera" {
+                guard UIImagePickerController.isSourceTypeAvailable(.camera) else { return }
+                let picker = UIImagePickerController()
+                picker.sourceType = .camera
+                picker.delegate = self
+                vc.present(picker, animated: true)
+            } else {
+                var config = PHPickerConfiguration()
+                config.filter = .images
+                config.selectionLimit = 1
+                let picker = PHPickerViewController(configuration: config)
+                picker.delegate = self
+                vc.present(picker, animated: true)
+            }
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            picker.dismiss(animated: true)
+            if let image = info[.originalImage] as? UIImage {
+                sendImageToWeb(image)
+            }
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true)
+        }
+
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            picker.dismiss(animated: true)
+            guard let provider = results.first?.itemProvider, provider.canLoadObject(ofClass: UIImage.self) else { return }
+            provider.loadObject(ofClass: UIImage.self) { [weak self] object, _ in
+                if let image = object as? UIImage {
+                    self?.sendImageToWeb(image)
+                }
+            }
+        }
+
+        private func sendImageToWeb(_ image: UIImage) {
+            let maxEdge: CGFloat = 1920
+            var finalImage = image
+            let longest = max(image.size.width, image.size.height)
+            if longest > maxEdge {
+                let scale = maxEdge / longest
+                let newSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+                UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+                image.draw(in: CGRect(origin: .zero, size: newSize))
+                if let resized = UIGraphicsGetImageFromCurrentImageContext() { finalImage = resized }
+                UIGraphicsEndImageContext()
+            }
+            guard let data = finalImage.jpegData(compressionQuality: 0.85) else { return }
+            let b64 = data.base64EncodedString()
+            let js = "window.quSeQiImageResult && window.quSeQiImageResult('data:image/jpeg;base64,\(b64)')"
+            DispatchQueue.main.async { [weak self] in
+                self?.webView?.evaluateJavaScript(js, completionHandler: nil)
+            }
         }
 
         private func saveBackup(_ json: String, auto: Bool) -> Bool {
