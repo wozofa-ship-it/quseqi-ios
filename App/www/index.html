@@ -389,9 +389,25 @@
       flex: 1; border: none; background: none; color: var(--tertiary);
       display: flex; flex-direction: column; align-items: center; gap: 3px;
       padding: 8px 0 8px; font-size: 10px; font-weight: 500;
+      position: relative; overflow: hidden; border-radius: 16px; margin: 4px 2px;
+      transition: all .25s cubic-bezier(.2,.7,.3,1);
     }
-    .tab-btn svg { width: 25px; height: 25px; }
-    .tab-btn.active { color: var(--accent); }
+    .tab-btn svg { width: 25px; height: 25px; position: relative; z-index: 2; }
+    .tab-btn span, .tab-btn { position: relative; z-index: 2; }
+    .tab-btn.active {
+      color: #0A84FF;
+      background: linear-gradient(180deg, rgba(10,132,255,.18), rgba(10,132,255,.08));
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(255,255,255,.45);
+      box-shadow:
+        0 6px 18px rgba(10,132,255,.22),
+        inset 0 1px 1px rgba(255,255,255,.65),
+        inset 0 -1px 2px rgba(255,255,255,.15);
+    }
+    @media (prefers-color-scheme: dark) {
+      .tab-btn.active { border-color: rgba(255,255,255,.18); color: #64A9FF; }
+    }
 
     .toast {
       position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom));
@@ -535,6 +551,33 @@
     .top10-de { font-size: 11px; color: var(--tertiary); flex-shrink: 0; }
     .top10-ratio-strip { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 6px; border: .5px solid var(--separator); }
     .top10-ratio-strip span { display: block; height: 100%; }
+    .top10-copy-btn {
+      flex-shrink: 0; font-size: 12px; font-weight: 600; color: #0A84FF;
+      border: 1px solid rgba(10,132,255,.35);
+      background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(10,132,255,.1));
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+      border-radius: 999px; padding: 6px 12px;
+      position: relative; overflow: hidden;
+    }
+    .top10-copy-btn:active { transform: scale(.94); }
+    /* 取色历史 */
+    .pick-history { margin-top: 12px; padding-top: 12px; border-top: .5px solid var(--separator); }
+    .pick-history-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .pick-history-head strong { font-size: 14px; }
+    .pick-history-clear { font-size: 12px; color: var(--tertiary); background: none; border: none; padding: 4px 8px; }
+    .pick-history-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+    .pick-history-item { flex-shrink: 0; width: 64px; text-align: center; }
+    .pick-history-swatch { width: 56px; height: 56px; border-radius: 12px; border: .5px solid var(--separator); margin: 0 auto 4px; }
+    .pick-history-code { font-size: 10px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* 我的色卡 */
+    .fav-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+    .fav-item { text-align: center; position: relative; }
+    .fav-swatch { aspect-ratio: 1; border-radius: 12px; border: .5px solid var(--separator); }
+    .fav-code { font-size: 11px; font-weight: 600; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fav-name { font-size: 10px; color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fav-star { position: absolute; top: -6px; right: -2px; font-size: 16px; background: none; border: none; padding: 4px; }
+    .top10-fav-btn { flex-shrink: 0; font-size: 16px; background: none; border: none; padding: 6px; }
     /* 油漆用量计算器 */
     .paint-calc { margin-top: 14px; padding: 14px; background: var(--bg); border-radius: 12px; }
     .paint-calc h3 { font-size: 15px; margin: 0 0 4px; }
@@ -671,6 +714,13 @@
               </div>
               <p class="candidate-list" id="candidateList">取色后显示另外四个相近色号，点选可切换</p>
               <button class="official-check" id="nipponOfficialBtn" type="button" hidden>在立邦官网查看该色号 ↗</button>
+              <div class="pick-history" id="pickHistory" hidden>
+                <div class="pick-history-head">
+                  <strong>取色历史</strong>
+                  <button class="pick-history-clear" id="clearHistory" type="button">清空</button>
+                </div>
+                <div class="pick-history-list" id="pickHistoryList"></div>
+              </div>
               <p class="library-status" id="libraryStatus">正在准备内置色卡…</p>
             </section>
             
@@ -763,6 +813,15 @@
                 <button class="search-btn" id="compareSwapBtn" type="button" title="交换">⇄</button>
               </div>
               <div class="compare-result" id="compareResult">输入两个立邦色号，看看它们摆在一起差多少。</div>
+            </section>
+            <section class="nippon-top10" aria-label="我的色卡">
+              <div class="palette-heading">
+                <strong>我的色卡</strong>
+                <span class="top10-hint">点 ★ 收藏色号，凑一套方案</span>
+              </div>
+              <div class="fav-grid" id="favGrid">
+                <p class="top10-empty" id="favEmpty" style="grid-column: 1/-1">在推荐列表点 ★，喜欢的色号会收在这里。</p>
+              </div>
             </section>
       </div>
       <p class="section-note" style="padding:0 4px">取色后自动生成配色方案，可在"协调 / 同色 / 对比"三种风格间切换。</p>
@@ -1333,11 +1392,36 @@
           var deEl = document.createElement('span');
           deEl.className = 'top10-de';
           deEl.textContent = 'ΔE' + item.distance.toFixed(1);
+          var copyBtn = document.createElement('button');
+          copyBtn.className = 'top10-copy-btn';
+          copyBtn.type = 'button';
+          copyBtn.textContent = '复制';
+          copyBtn.setAttribute('aria-label', '复制色号 ' + item.color.code);
+          (function (code, nm) {
+            copyBtn.addEventListener('click', function (e) {
+              e.stopPropagation();
+              copyText(code + (nm ? '·' + nm : ''), '色号已复制');
+            });
+          })(item.color.code, name);
+          var favBtn = document.createElement('button');
+          favBtn.className = 'top10-fav-btn';
+          favBtn.type = 'button';
+          favBtn.textContent = isFav(item.color.code) ? '★' : '☆';
+          favBtn.setAttribute('aria-label', '收藏 ' + item.color.code);
+          (function (code, hex, btn) {
+            favBtn.addEventListener('click', function (e) {
+              e.stopPropagation();
+              toggleFav(code, hex);
+              btn.textContent = isFav(code) ? '★' : '☆';
+            });
+          })(item.color.code, item.color.hex, favBtn);
           row.appendChild(rank);
           row.appendChild(sw);
           row.appendChild(info);
           row.appendChild(pctEl);
           row.appendChild(deEl);
+          row.appendChild(copyBtn);
+          row.appendChild(favBtn);
           row.addEventListener('click', function () { openNipponColor(item.color.code); });
           list.appendChild(row);
         });
@@ -1874,6 +1958,8 @@
         updateNipponMatch();
         buildPalette();
         updateRecipeTarget();
+        // 取色历史：用匹配到的色号记
+        try { addToHistory(currentHex, currentNipponCode !== '—' ? currentNipponCode : ''); } catch (e) {}
       }
 
       function clampChannel(value) {
@@ -2339,6 +2425,105 @@
           if (e.key === 'Enter') { e.preventDefault(); doCompare(); }
         });
       });
+      // ---- 取色历史 ----
+      var pickHistory = [];
+      function addToHistory(hex, code) {
+        var now = new Date();
+        var time = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+        // 去重：同样的 hex 不重复加
+        pickHistory = pickHistory.filter(function (h) { return h.hex !== hex; });
+        pickHistory.unshift({ hex: hex, code: code || '', time: time });
+        if (pickHistory.length > 20) pickHistory.pop();
+        renderHistory();
+      }
+      function renderHistory() {
+        var wrap = document.getElementById('pickHistory');
+        var list = document.getElementById('pickHistoryList');
+        if (!pickHistory.length) { wrap.hidden = true; return; }
+        wrap.hidden = false;
+        list.innerHTML = '';
+        pickHistory.forEach(function (h) {
+          var item = document.createElement('div');
+          item.className = 'pick-history-item';
+          var sw = document.createElement('div');
+          sw.className = 'pick-history-swatch';
+          sw.style.backgroundColor = h.hex;
+          var code = document.createElement('div');
+          code.className = 'pick-history-code';
+          code.textContent = h.code || h.hex;
+          item.appendChild(sw);
+          item.appendChild(code);
+          item.addEventListener('click', function () {
+            var rgb = hexToRgb(h.hex);
+            setColor(rgb[0], rgb[1], rgb[2]);
+          });
+          list.appendChild(item);
+        });
+      }
+      document.getElementById('clearHistory').addEventListener('click', function () {
+        pickHistory = [];
+        renderHistory();
+      });
+      // ---- 我的色卡（收藏） ----
+      var favColors = [];
+      function isFav(code) {
+        return favColors.some(function (f) { return f.code === code; });
+      }
+      function toggleFav(code, hex) {
+        var idx = -1;
+        for (var i = 0; i < favColors.length; i++) {
+          if (favColors[i].code === code) { idx = i; break; }
+        }
+        if (idx >= 0) {
+          favColors.splice(idx, 1);
+          showToast('已取消收藏');
+        } else {
+          favColors.push({ code: code, hex: hex, name: nipponNameFor(code) || '' });
+          showToast('已加入我的色卡');
+        }
+        renderFav();
+      }
+      function renderFav() {
+        var grid = document.getElementById('favGrid');
+        grid.innerHTML = '';
+        if (!favColors.length) {
+          var empty = document.createElement('p');
+          empty.className = 'top10-empty';
+          empty.style.gridColumn = '1/-1';
+          empty.textContent = '在推荐列表点 ★，喜欢的色号会收在这里。';
+          grid.appendChild(empty);
+          return;
+        }
+        favColors.forEach(function (f) {
+          var item = document.createElement('div');
+          item.className = 'fav-item';
+          var sw = document.createElement('div');
+          sw.className = 'fav-swatch';
+          sw.style.backgroundColor = f.hex;
+          var code = document.createElement('div');
+          code.className = 'fav-code';
+          code.textContent = f.code;
+          item.appendChild(sw);
+          item.appendChild(code);
+          if (f.name) {
+            var nm = document.createElement('div');
+            nm.className = 'fav-name';
+            nm.textContent = f.name;
+            item.appendChild(nm);
+          }
+          var unstar = document.createElement('button');
+          unstar.className = 'fav-star';
+          unstar.type = 'button';
+          unstar.textContent = '★';
+          unstar.addEventListener('click', function (e) {
+            e.stopPropagation();
+            toggleFav(f.code, f.hex);
+          });
+          item.appendChild(unstar);
+          item.addEventListener('click', function () { openNipponColor(f.code); });
+          grid.appendChild(item);
+        });
+      }
       // ---- 配色记录本 ----
       var paletteRecords = [];
       function styleNameOf() {
@@ -2432,7 +2617,7 @@
       });
       // 液态点按效果：涟漪 + 果冻形变，挂到所有玻璃按钮上
       function attachLiquidPress() {
-        var btns = document.querySelectorAll('.copy-palette, .copy-all, .save-recipe, .mix-go, .search-btn, .save-palette-record, .scheme-tab, .note-cat-tab, .record-action');
+        var btns = document.querySelectorAll('.copy-palette, .copy-all, .save-recipe, .mix-go, .search-btn, .save-palette-record, .scheme-tab, .note-cat-tab, .record-action, .tab-btn, .top10-copy-btn');
         Array.prototype.forEach.call(btns, function (btn) {
           if (btn.__liquid) return;
           btn.__liquid = true;
