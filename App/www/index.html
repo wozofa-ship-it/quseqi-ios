@@ -543,7 +543,7 @@
       </div>
       <div id="caseDbStatus" style="padding:8px 16px 0;font-size:12px;color:var(--tertiary)">正在连接在线案例库…</div>
       <div id="caseList"></div>
-      <p class="section-note" style="padding:0 16px 8px">点色块复制色号，"送去混色"可直接调配；"视频方案"在 App 内预览 B 站实拍视频，"图文方案"看小红书图文。</p>
+      <p class="section-note" style="padding:0 16px 8px">点色块复制色号，"送去混色"可直接调配；"视频方案"在 App 内打开 B 站相关视频，"图文方案"看小红书图文。</p>
       <div style="padding:0 16px 16px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="record-action" type="button" data-official-url="https://www.nipponpaint.com.cn/">立邦官网</button>
         <button class="record-action" type="button" data-official-url="https://www.skshu.com/">三棵树官网</button>
@@ -2354,96 +2354,15 @@
       else window.open(url, '_blank');
     }
 
-    // ---- 网上配色视频预览浮层 ----
-    var videoMask = document.createElement('div');
-    videoMask.className = 'video-sheet-mask';
-    var videoSheet = document.createElement('div');
-    videoSheet.className = 'video-sheet';
-    var videoHead = document.createElement('div');
-    videoHead.className = 'video-sheet-head';
-    var videoTitle = document.createElement('div');
-    videoTitle.className = 'video-sheet-title';
-    videoTitle.textContent = '相关视频';
-    var videoClose = document.createElement('button');
-    videoClose.type = 'button';
-    videoClose.className = 'video-sheet-close';
-    videoClose.textContent = '×';
-    videoHead.appendChild(videoTitle);
-    videoHead.appendChild(videoClose);
-    var videoList = document.createElement('div');
-    videoList.className = 'video-list';
-    videoSheet.appendChild(videoHead);
-    videoSheet.appendChild(videoList);
-    document.body.appendChild(videoMask);
-    document.body.appendChild(videoSheet);
-
-    function closeVideoSheet() {
-      videoMask.classList.remove('open');
-      videoSheet.classList.remove('open');
-    }
-    videoClose.addEventListener('click', closeVideoSheet);
-    videoMask.addEventListener('click', closeVideoSheet);
-
-    function openVideoSheet(keyword, title) {
-      videoTitle.textContent = title + ' · 相关视频';
-      videoList.innerHTML = '<div class="video-loading">正在加载视频…</div>';
-      videoMask.classList.add('open');
-      videoSheet.classList.add('open');
+    // 视频方案：App 内直接打开 B 站搜索（应用内浏览器，不跳出去）
+    function openCaseVideos(c) {
+      var keyword = (c && c.video_keyword) || ((c && c.name) + '装修配色');
       var bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quSeQiSearchVideos;
-      if (bridge) {
-        bridge.postMessage(keyword);
-      } else {
-        // 非 App 环境降级：直接跳 B 站搜索
-        closeVideoSheet();
-        openExternal('https://search.bilibili.com/all?keyword=' + encodeURIComponent(keyword));
-      }
+      if (bridge) bridge.postMessage(keyword);
+      else openExternal('https://search.bilibili.com/all?keyword=' + encodeURIComponent(keyword));
     }
 
-    window.quSeQiVideosResult = function (jsonStr) {
-      var videos = [];
-      try { videos = JSON.parse(jsonStr) || []; } catch (e) { videos = []; }
-      videoList.innerHTML = '';
-      if (!videos.length) {
-        var empty = document.createElement('div');
-        empty.className = 'video-empty';
-        empty.textContent = '暂时没搜到相关视频，换个关键词试试';
-        videoList.appendChild(empty);
-        return;
-      }
-      videos.forEach(function (v) {
-        var item = document.createElement('div');
-        item.className = 'video-item';
-        var thumb = document.createElement('div');
-        thumb.className = 'video-thumb';
-        var img = document.createElement('img');
-        img.src = v.pic;
-        img.setAttribute('loading', 'lazy');
-        img.onerror = function () { img.style.display = 'none'; };
-        thumb.appendChild(img);
-        if (v.duration) {
-          var dur = document.createElement('span');
-          dur.className = 'video-duration';
-          dur.textContent = v.duration;
-          thumb.appendChild(dur);
-        }
-        var info = document.createElement('div');
-        info.className = 'video-info';
-        var t = document.createElement('div');
-        t.className = 'video-title';
-        t.textContent = v.title;
-        var meta = document.createElement('div');
-        meta.className = 'video-meta';
-        meta.textContent = (v.author || '') + (v.play ? ' · ' + v.play + '播放' : '');
-        info.appendChild(t);
-        info.appendChild(meta);
-        item.appendChild(thumb);
-        item.appendChild(info);
-        item.addEventListener('click', function () {
-          openExternal('https://www.bilibili.com/video/' + v.bvid);
-        });
-        videoList.appendChild(item);
-      });
-    };
+
 
     var CASES = [
       { brand: '立邦', name: '心岛绿·客厅', space: '客厅 · 2025年度色"心岛"主题', colors: [
@@ -2522,11 +2441,27 @@
         return { n: String(col.n || '').slice(0, 20), hex: String(col.hex || '').toUpperCase() };
       }).filter(function (col) { return /^#[0-9A-F]{6}$/.test(col.hex); });
       if (colors.length < 2) return null;
+      // 保留内嵌视频
+      var videos = [];
+      if (Array.isArray(c.videos)) {
+        videos = c.videos.slice(0, 8).map(function (v) {
+          if (!v || !v.bvid) return null;
+          return {
+            bvid: String(v.bvid),
+            title: String(v.title || '').slice(0, 80),
+            pic: String(v.pic || ''),
+            author: String(v.author || '').slice(0, 20),
+            duration: String(v.duration || '').slice(0, 10)
+          };
+        }).filter(Boolean);
+      }
       return {
-        brand: String(c.brand || '大师方案').slice(0, 20),
+        brand: String(c.brand || '流行风').slice(0, 20),
         name: String(c.name).slice(0, 40),
         space: String(c.space || '').slice(0, 40),
-        colors: colors
+        colors: colors,
+        videos: videos,
+        video_keyword: String(c.video_keyword || '')
       };
     }
 
@@ -2688,7 +2623,7 @@
           videoBtn.style.cssText = 'flex:1;padding:10px;font-size:13px';
           videoBtn.textContent = '视频方案';
           videoBtn.addEventListener('click', function () {
-            openVideoSheet(c.name + '装修配色', c.name);
+            openCaseVideos(c);
           });
           var picBtn = document.createElement('button');
           picBtn.type = 'button';
