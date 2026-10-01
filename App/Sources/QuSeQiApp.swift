@@ -29,6 +29,7 @@ struct WebViewContainer: UIViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: "quSeQiPickImage")
         configuration.userContentController.add(context.coordinator, name: "quSeQiOpenWeChat")
         configuration.userContentController.add(context.coordinator, name: "quSeQiSearchVideos")
+        configuration.userContentController.add(context.coordinator, name: "quSeQiOpenXiaohongshu")
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.scrollView.bounces = false
@@ -57,6 +58,11 @@ struct WebViewContainer: UIViewRepresentable {
             if message.name == "quSeQiSearchVideos" {
                 let keyword = (message.body as? String) ?? ""
                 openInAppBrowser(keyword: keyword)
+                return
+            }
+            if message.name == "quSeQiOpenXiaohongshu" {
+                let keyword = (message.body as? String) ?? ""
+                openXiaohongshuSearch(keyword: keyword)
                 return
             }
             if message.name == "quSeQiPickImage" {
@@ -204,6 +210,23 @@ struct WebViewContainer: UIViewRepresentable {
             guard let vc = topViewController() else { return }
             let safari = SFSafariViewController(url: url)
             vc.present(safari, animated: true)
+        }
+
+        // 图文方案：优先跳小红书 App 内搜索；没装则应用内浏览器打开百度站内搜索
+        private func openXiaohongshuSearch(keyword: String) {
+            let kw = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !kw.isEmpty,
+                  let encoded = kw.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                  let appURL = URL(string: "xhsdiscover://search/result?keyword=\(encoded)") else { return }
+            UIApplication.shared.open(appURL, options: [:]) { [weak self] success in
+                guard !success else { return }
+                let q = ("site:xiaohongshu.com " + kw).addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? kw
+                guard let webURL = URL(string: "https://www.baidu.com/s?wd=\(q)"),
+                      let vc = self?.topViewController() else { return }
+                DispatchQueue.main.async {
+                    vc.present(SFSafariViewController(url: webURL), animated: true)
+                }
+            }
         }
 
         private func sendImageToWeb(_ image: UIImage) {
