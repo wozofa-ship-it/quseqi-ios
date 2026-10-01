@@ -404,7 +404,28 @@
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .offline-btn { display: none; }
 
-    /* ===== iOS 26 液态玻璃按钮 ===== */
+    /* ===== iOS 26 液态点按效果 ===== */
+    @keyframes liquid-jelly {
+      0% { transform: scale(1, 1); }
+      25% { transform: scale(.93, .88); }
+      45% { transform: scale(1.04, 1.06); }
+      65% { transform: scale(.97, .98); }
+      82% { transform: scale(1.01, 1.02); }
+      100% { transform: scale(1, 1); }
+    }
+    @keyframes liquid-ripple {
+      0% { transform: translate(-50%, -50%) scale(0); opacity: .8; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+    }
+    .liquid-ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,.65) 0%, rgba(255,255,255,.2) 40%, transparent 70%);
+      pointer-events: none;
+      z-index: 1;
+      animation: liquid-ripple .55s cubic-bezier(.2,.7,.3,1) forwards;
+    }
+    .liquid-press { animation: liquid-jelly .5s cubic-bezier(.2,.7,.3,1); }
     .liquid-glass {
       position: relative;
       border: 1px solid rgba(255, 255, 255, 0.45);
@@ -514,6 +535,19 @@
     .top10-de { font-size: 11px; color: var(--tertiary); flex-shrink: 0; }
     .top10-ratio-strip { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 6px; border: .5px solid var(--separator); }
     .top10-ratio-strip span { display: block; height: 100%; }
+    /* 油漆用量计算器 */
+    .paint-calc { margin-top: 14px; padding: 14px; background: var(--bg); border-radius: 12px; }
+    .paint-calc h3 { font-size: 15px; margin: 0 0 4px; }
+    .paint-result { margin-top: 12px; font-size: 15px; font-weight: 700; line-height: 1.7; }
+    .paint-result .big { font-size: 24px; color: #0A84FF; }
+    /* 双色对比 */
+    .compare-grid { display: flex; gap: 10px; margin-top: 10px; }
+    .compare-col { flex: 1; min-width: 0; }
+    .compare-swatch { height: 110px; border-radius: 12px; border: .5px solid var(--separator); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; }
+    .compare-swatch span { font-size: 11px; font-weight: 700; background: rgba(0,0,0,.45); color: #fff; padding: 2px 8px; border-radius: 999px; }
+    .compare-input { width: 100%; margin-top: 8px; font-size: 14px; padding: 9px 10px; border-radius: 10px; border: .5px solid var(--separator); background: var(--bg); color: var(--text); }
+    .compare-result { margin-top: 10px; font-size: 13px; color: var(--secondary); line-height: 1.8; }
+    .compare-result b { color: var(--text); }
     /* 配色页色号搜索 */
     .scheme-search { margin-bottom: 16px; padding-bottom: 14px; border-bottom: .5px solid var(--separator); }
     .search-row { display: flex; gap: 8px; }
@@ -708,6 +742,27 @@
               <div id="nipponTop10List" class="top10-list">
                 <p class="top10-empty">取色后显示最接近的 10 个立邦色号</p>
               </div>
+            </section>
+            <section class="nippon-top10" aria-label="双色对比">
+              <div class="palette-heading">
+                <strong>双色对比</strong>
+                <span class="top10-hint">两个色号放一起比，帮你二选一</span>
+              </div>
+              <div class="compare-grid">
+                <div class="compare-col">
+                  <div class="compare-swatch" id="compareSwatchA"><span>色号 A</span></div>
+                  <input class="compare-input" id="compareInputA" type="text" placeholder="输入色号A，如 BN7610-4" autocomplete="off" />
+                </div>
+                <div class="compare-col">
+                  <div class="compare-swatch" id="compareSwatchB"><span>色号 B</span></div>
+                  <input class="compare-input" id="compareInputB" type="text" placeholder="输入色号B，如 NN7320-3" autocomplete="off" />
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button class="search-btn" id="compareBtn" type="button" style="flex:1">开始对比</button>
+                <button class="search-btn" id="compareSwapBtn" type="button" title="交换">⇄</button>
+              </div>
+              <div class="compare-result" id="compareResult">输入两个立邦色号，看看它们摆在一起差多少。</div>
             </section>
       </div>
       <p class="section-note" style="padding:0 4px">取色后自动生成配色方案，可在"协调 / 同色 / 对比"三种风格间切换。</p>
@@ -916,6 +971,26 @@
           </div>
           <div class="record-list" id="siteList">
             <div class="record-empty" id="siteEmpty">先填名字，再一条条记录墙、门、窗、床等尺寸。</div>
+          </div>
+          <div class="paint-calc">
+            <h3>油漆用量计算</h3>
+            <p class="section-note">按上面记录的总面积估算要买多少漆。</p>
+            <div class="base-grid" style="grid-template-columns:1fr 1fr">
+              <div>
+                <label class="field-label" for="paintCoats">涂刷遍数</label>
+                <select class="field-select" id="paintCoats">
+                  <option value="1">1 遍</option>
+                  <option value="2" selected>2 遍</option>
+                  <option value="3">3 遍</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label" for="paintCoverage">每升可刷 (㎡)</label>
+                <input class="field-input" id="paintCoverage" type="number" inputmode="decimal" min="1" step="0.5" value="12" />
+              </div>
+            </div>
+            <div class="paint-result" id="paintResult">记录尺寸后自动算出用量。</div>
+            <p class="section-note">乳胶漆一般一遍 10–14㎡/L，默认按 12 算；门窗等不刷漆的位置记得从面积里扣除。</p>
           </div>
         </section>
       </div>
@@ -1622,8 +1697,40 @@
           card.appendChild(head);
           siteListEl.appendChild(card);
         });
+        updatePaintCalc();
+      }
+      // 油漆用量计算器
+      function updatePaintCalc() {
+        var el = document.getElementById('paintResult');
+        if (!el) return;
+        var totalArea = 0;
+        siteRecords.forEach(function (rec) { totalArea += dimArea(rec); });
+        if (!(totalArea > 0)) {
+          el.textContent = '记录尺寸后自动算出用量。';
+          return;
+        }
+        var coats = Number(document.getElementById('paintCoats').value) || 2;
+        var coverage = Number(document.getElementById('paintCoverage').value) || 12;
+        if (!(coverage > 0)) coverage = 12;
+        var liters = totalArea * coats / coverage;
+        var buckets18 = Math.floor(liters / 18);
+        var rem = liters - buckets18 * 18;
+        var buckets5 = Math.ceil(rem / 5);
+        var plan = [];
+        if (buckets18 > 0) plan.push(buckets18 + ' 桶 18L');
+        if (buckets5 > 0) plan.push(buckets5 + ' 桶 5L');
+        el.innerHTML = '总面积约 <b>' + totalArea.toFixed(1) + '㎡</b> × ' + coats + ' 遍<br>' +
+          '需要油漆约 <span class="big">' + liters.toFixed(1) + ' 升</span><br>' +
+          '<span style="font-size:13px;font-weight:400;color:var(--secondary)">建议购买：' + (plan.join(' + ') || '1 桶 5L') + '（已按整桶凑）</span>';
       }
       var saveDimBtn = document.getElementById('saveDim');
+      var paintCoatsEl = document.getElementById('paintCoats');
+      var paintCoverageEl = document.getElementById('paintCoverage');
+      if (paintCoatsEl) paintCoatsEl.addEventListener('change', updatePaintCalc);
+      if (paintCoverageEl) {
+        paintCoverageEl.addEventListener('input', updatePaintCalc);
+        paintCoverageEl.addEventListener('change', updatePaintCalc);
+      }
       if (saveDimBtn) {
         saveDimBtn.addEventListener('click', function () {
           var site = siteNameEl.value.trim();
@@ -2189,6 +2296,49 @@
         var name = nipponNameFor(searchColorObj.code);
         copyText(searchColorObj.code + (name ? '·' + name : '') + ' 配色方案（' + styleName + '）\n主色 60%：' + scheme[0] + '\n辅色 30%：' + scheme[1] + '\n点缀 10%：' + scheme[2], '配色方案已复制');
       });
+      // ---- 双色对比 ----
+      function doCompare() {
+        var a = findNipponByQuery(document.getElementById('compareInputA').value);
+        var b = findNipponByQuery(document.getElementById('compareInputB').value);
+        var resultEl = document.getElementById('compareResult');
+        if (!a || !b) {
+          showToast('两个色号都要找到，检查下输入');
+          return;
+        }
+        var nameA = nipponNameFor(a.code), nameB = nipponNameFor(b.code);
+        var swA = document.getElementById('compareSwatchA');
+        var swB = document.getElementById('compareSwatchB');
+        swA.style.backgroundColor = a.hex;
+        swB.style.backgroundColor = b.hex;
+        swA.querySelector('span').textContent = a.code;
+        swB.querySelector('span').textContent = b.code;
+        var labA = rgbToLab(hexToRgb(a.hex));
+        var labB = rgbToLab(hexToRgb(b.hex));
+        var de = deltaE2000(labA, labB);
+        var lightDiff = labA[0] - labB[0];
+        var warmer = (labA[2] - labB[2]) > 2 ? a.code : ((labB[2] - labA[2]) > 2 ? b.code : '差不多');
+        var html = '<b>' + a.code + (nameA ? '·' + nameA : '') + '</b> vs <b>' + b.code + (nameB ? '·' + nameB : '') + '</b><br>' +
+          '色差 ΔE <b>' + de.toFixed(1) + '</b>（' + deltaQuality(de) + '）<br>';
+        if (Math.abs(lightDiff) > 3) {
+          html += (lightDiff > 0 ? a.code : b.code) + ' 更亮，' + (lightDiff > 0 ? b.code : a.code) + ' 更深<br>';
+        } else {
+          html += '两者明暗接近<br>';
+        }
+        html += '更暖：<b>' + warmer + '</b>';
+        resultEl.innerHTML = html;
+      }
+      document.getElementById('compareBtn').addEventListener('click', doCompare);
+      document.getElementById('compareSwapBtn').addEventListener('click', function () {
+        var ia = document.getElementById('compareInputA');
+        var ib = document.getElementById('compareInputB');
+        var t = ia.value; ia.value = ib.value; ib.value = t;
+        if (ia.value && ib.value) doCompare();
+      });
+      ['compareInputA', 'compareInputB'].forEach(function (id) {
+        document.getElementById(id).addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') { e.preventDefault(); doCompare(); }
+        });
+      });
       // ---- 配色记录本 ----
       var paletteRecords = [];
       function styleNameOf() {
@@ -2280,6 +2430,33 @@
           noteCatPanels.forEach(function (p) { p.hidden = p.getAttribute('data-notecat-panel') !== cat; });
         });
       });
+      // 液态点按效果：涟漪 + 果冻形变，挂到所有玻璃按钮上
+      function attachLiquidPress() {
+        var btns = document.querySelectorAll('.copy-palette, .copy-all, .save-recipe, .mix-go, .search-btn, .save-palette-record, .scheme-tab, .note-cat-tab, .record-action');
+        Array.prototype.forEach.call(btns, function (btn) {
+          if (btn.__liquid) return;
+          btn.__liquid = true;
+          btn.style.position = btn.style.position || 'relative';
+          btn.style.overflow = 'hidden';
+          btn.addEventListener('pointerdown', function (e) {
+            if (btn.disabled) return;
+            btn.classList.remove('liquid-press');
+            void btn.offsetWidth;
+            btn.classList.add('liquid-press');
+            var rect = btn.getBoundingClientRect();
+            var size = Math.max(rect.width, rect.height) * 2.2;
+            var ripple = document.createElement('span');
+            ripple.className = 'liquid-ripple';
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = (e.clientX - rect.left) + 'px';
+            ripple.style.top = (e.clientY - rect.top) + 'px';
+            btn.appendChild(ripple);
+            setTimeout(function () { ripple.remove(); }, 600);
+            setTimeout(function () { btn.classList.remove('liquid-press'); }, 520);
+          });
+        });
+      }
+      attachLiquidPress();
       addTint.addEventListener('click', function () { addTintRow(); });
       baseAmount.addEventListener('input', updateRatioPreview);
       baseUnit.addEventListener('change', updateRatioPreview);
