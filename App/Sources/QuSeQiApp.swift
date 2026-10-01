@@ -23,6 +23,7 @@ struct WebViewContainer: UIViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: "quSeQiBackup")
         configuration.userContentController.add(context.coordinator, name: "quSeQiListBackups")
         configuration.userContentController.add(context.coordinator, name: "quSeQiRestoreBackup")
+        configuration.userContentController.add(context.coordinator, name: "quSeQiOpenURL")
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.scrollView.bounces = false
@@ -40,6 +41,15 @@ struct WebViewContainer: UIViewRepresentable {
         weak var webView: WKWebView?
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "quSeQiOpenURL" {
+                if let urlStr = message.body as? String, let url = URL(string: urlStr),
+                   ["http", "https"].contains(url.scheme?.lowercased() ?? "") {
+                    DispatchQueue.main.async {
+                        UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                    }
+                }
+                return
+            }
             if message.name == "quSeQiListBackups" {
                 let files = listBackupFiles()
                 if let data = try? JSONSerialization.data(withJSONObject: files),
