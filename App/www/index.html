@@ -1299,10 +1299,18 @@
         });
         renderRecords();
         clearRecipeForm();
-        showToast('已加入本次记录，请下载保存');
+        autoBackupRecords();
+        showToast('已保存，并自动备份到本机涂料配色文件夹');
       });
+      // 自动备份：保存配方后静默写入本机 涂料配色/调色记录-自动备份.json
+      function autoBackupRecords() {
+        if (!recipeRecords.length) return;
+        var payload = JSON.stringify({ format: '涂料配色手动调色记录', version: 1, mode: 'auto', records: recipeRecords, backupLog: backupLog }, null, 2);
+        var bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quSeQiBackup;
+        if (bridge) bridge.postMessage(payload);
+      }
       window.quSeQiBackupResult = function (ok) {
-        showToast(ok ? '已备份到取色器备份文件夹' : '备份失败，请重试');
+        showToast(ok ? '已备份到本机涂料配色文件夹' : '备份失败，请重试');
       };
       downloadRecords.addEventListener('click', function () {
         if (!recipeRecords.length) return;
