@@ -183,7 +183,8 @@
     .mix-label { font-size: 13px; color: var(--secondary); font-weight: 600; }
     .mix-hex { font-size: 11px; color: var(--tertiary); font-family: ui-monospace, monospace; }
     .mix-ratio { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--tertiary); }
-    .mix-ratio input { width: 52px; border: none; background: var(--card); border-radius: 8px; padding: 7px 6px; font-size: 13px; color: var(--text); text-align: center; }
+    .mix-ratio input { width: 56px; border: none; background: var(--card); border-radius: 8px; padding: 7px 6px; font-size: 13px; color: var(--text); text-align: center; }
+    .mix-ratio select { border: none; background: var(--card); border-radius: 8px; padding: 7px 4px; font-size: 12px; color: var(--text); }
     .mix-actions { display: flex; gap: 8px; margin-bottom: 16px; }
     .mix-use-current { flex: 1; border: none; background: var(--bg); border-radius: 10px; padding: 10px; font-size: 13px; font-weight: 600; color: var(--accent); }
     .mix-result { text-align: center; padding: 16px 0 4px; }
@@ -498,7 +499,12 @@
         <button class="case-filter-btn" type="button" data-brand="多乐士">多乐士</button>
       </div>
       <div id="caseList"></div>
-      <p class="section-note" style="padding:0 16px 16px">案例配色为品牌年度流行色系的参考搭配，点色块复制色号，"送去混色"可直接调配。</p>
+      <p class="section-note" style="padding:0 16px 8px">案例配色为品牌年度流行色系的参考搭配，点色块复制色号，"送去混色"可直接调配。</p>
+      <div style="padding:0 16px 16px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="record-action" type="button" onclick="window.open('https://www.nipponpaint.com.cn/','_blank')">立邦官网</button>
+        <button class="record-action" type="button" onclick="window.open('https://www.skshu.com/','_blank')">三棵树官网</button>
+        <button class="record-action" type="button" onclick="window.open('https://www.dulux.com.cn/','_blank')">多乐士官网</button>
+      </div>
     </div>
     <div class="tab-panel" id="tab-notes">
       <section class="notebook-panel" aria-labelledby="notebookHeading">
@@ -556,6 +562,10 @@
           <div class="backup-log" aria-label="备份记录">
             <h3>备份记录</h3>
             <div id="backupLogList"><div class="backup-empty">暂无备份记录，下载或导入记录后会记在这里。</div></div>
+          </div>
+          <div class="backup-log" aria-label="本机备份文件">
+            <h3>本机备份文件 <button class="record-action" id="refreshBackups" type="button" style="float:right;padding:6px 12px;font-size:12px">刷新</button></h3>
+            <div id="backupFileList"><div class="backup-empty">点"刷新"查看本机"涂料配色"文件夹里的备份。</div></div>
           </div>
         </section>
       <section class="notebook-panel" aria-labelledby="siteHeading" style="margin-top:12px">
@@ -1647,6 +1657,90 @@
       window.quSeQiBackupResult = function (ok) {
         showToast(ok ? '已备份到本机涂料配色文件夹' : '备份失败，请重试');
       };
+      // 本机备份文件列表与恢复
+      var backupFileListEl = document.getElementById('backupFileList');
+      var refreshBackupsBtn = document.getElementById('refreshBackups');
+      window.quSeQiBackupListResult = function (jsonStr) {
+        try {
+          var files = JSON.parse(jsonStr);
+          backupFileListEl.innerHTML = '';
+          if (!files.length) {
+            var empty = document.createElement('div');
+            empty.className = 'backup-empty';
+            empty.textContent = '文件夹里还没有备份文件。';
+            backupFileListEl.appendChild(empty);
+            return;
+          }
+          files.forEach(function (f) {
+            var item = document.createElement('div');
+            item.className = 'backup-item';
+            var info = document.createElement('div');
+            info.style.cssText = 'flex:1;min-width:0';
+            var nm = document.createElement('div');
+            nm.style.cssText = 'font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+            nm.textContent = f.name;
+            var meta = document.createElement('div');
+            meta.style.cssText = 'font-size:11px;color:var(--tertiary)';
+            meta.textContent = f.time + ' · ' + f.size;
+            info.appendChild(nm);
+            info.appendChild(meta);
+            var restoreBtn = document.createElement('button');
+            restoreBtn.type = 'button';
+            restoreBtn.className = 'record-action';
+            restoreBtn.style.cssText = 'padding:6px 12px;font-size:12px;flex-shrink:0';
+            restoreBtn.textContent = '恢复';
+            restoreBtn.addEventListener('click', function () {
+              var bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quSeQiRestoreBackup;
+              if (bridge) bridge.postMessage(f.name);
+              else showToast('当前环境不支持恢复');
+            });
+            item.style.cssText = 'display:flex;align-items:center;gap:8px';
+            item.appendChild(info);
+            item.appendChild(restoreBtn);
+            backupFileListEl.appendChild(item);
+          });
+        } catch (e) {
+          showToast('读取备份列表失败');
+        }
+      };
+      window.quSeQiRestoreResult = function (content) {
+        if (!content) { showToast('读取备份文件失败'); return; }
+        try {
+          var parsed = JSON.parse(content);
+          var restored = 0;
+          if (Array.isArray(parsed.records)) {
+            var imported = parsed.records.slice(0, 100).map(validImportedRecord).filter(Boolean);
+            if (imported.length) {
+              recipeRecords = imported.concat(recipeRecords);
+              renderRecords();
+              restored += imported.length;
+            }
+          }
+          if (Array.isArray(parsed.siteRecords)) {
+            var sites = parsed.siteRecords.filter(function (r) {
+              return r && typeof r.site === 'string' && typeof r.category === 'string';
+            }).slice(0, 200);
+            if (sites.length) {
+              siteRecords = sites.concat(siteRecords);
+              renderSiteRecords();
+              restored += sites.length;
+            }
+          }
+          logBackup('import', restored);
+          showToast(restored ? '已恢复 ' + restored + ' 条记录' : '文件里没有可恢复的记录');
+        } catch (e) {
+          showToast('备份文件格式无法识别');
+        }
+      };
+      if (refreshBackupsBtn) {
+        refreshBackupsBtn.addEventListener('click', function () {
+          var bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quSeQiListBackups;
+          if (bridge) bridge.postMessage('list');
+          else {
+            backupFileListEl.innerHTML = '<div class="backup-empty">当前环境不支持读取本机文件（请用 App 打开）。</div>';
+          }
+        });
+      }
       downloadRecords.addEventListener('click', function () {
         if (!recipeRecords.length) return;
         logBackup('download', recipeRecords.length);
@@ -1767,7 +1861,8 @@
     if (!mixSlots) return;
     var slotCount = 2;
     var slotColors = [null, null, null, null]; // 存 hex 字符串
-    var slotRatios = [1, 1, 1, 1]; // 每种颜色的比率
+    var slotAmounts = [10, 10, 10, 10]; // 每种颜色的用量
+    var slotUnits = ['g', 'g', 'g', 'g']; // 用量单位
 
     // 内置色板：常用色，点击填入第一个空位
     var paletteColors = [
@@ -1834,7 +1929,7 @@
           delBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             slotColors[idx] = null;
-            slotRatios[idx] = 1;
+            slotAmounts[idx] = 10;
             renderSlots();
           });
           wrap.appendChild(delBtn);
@@ -1868,7 +1963,7 @@
           wrap.appendChild(circle);
           wrap.appendChild(label);
           wrap.appendChild(hex);
-          // 比率输入
+          // 用量输入（实际用量：克/毫升）
           if (slotColors[idx]) {
             var ratioWrap = document.createElement('div');
             ratioWrap.className = 'mix-ratio';
@@ -1877,16 +1972,26 @@
             ratioInput.inputMode = 'decimal';
             ratioInput.min = '0';
             ratioInput.step = '0.5';
-            ratioInput.value = slotRatios[idx];
-            ratioInput.setAttribute('aria-label', '第' + (idx + 1) + '种颜色比率');
+            ratioInput.value = slotAmounts[idx];
+            ratioInput.setAttribute('aria-label', '第' + (idx + 1) + '种颜色用量');
             ratioInput.addEventListener('input', function () {
               var v = Number(ratioInput.value);
-              slotRatios[idx] = (isFinite(v) && v > 0) ? v : 0;
+              slotAmounts[idx] = (isFinite(v) && v > 0) ? v : 0;
             });
-            var ratioLabel = document.createElement('span');
-            ratioLabel.textContent = '份';
+            var unitSel = document.createElement('select');
+            ['g', 'ml'].forEach(function (u) {
+              var opt = document.createElement('option');
+              opt.value = u;
+              opt.textContent = u;
+              opt.selected = slotUnits[idx] === u;
+              unitSel.appendChild(opt);
+            });
+            unitSel.setAttribute('aria-label', '用量单位');
+            unitSel.addEventListener('change', function () {
+              slotUnits[idx] = unitSel.value;
+            });
             ratioWrap.appendChild(ratioInput);
-            ratioWrap.appendChild(ratioLabel);
+            ratioWrap.appendChild(unitSel);
             wrap.appendChild(ratioWrap);
           }
           mixSlots.appendChild(wrap);
@@ -1923,7 +2028,8 @@
 
     mixClear.addEventListener('click', function () {
       slotColors = [null, null, null, null];
-      slotRatios = [1, 1, 1, 1];
+      slotAmounts = [10, 10, 10, 10];
+      slotUnits = ["g", "g", "g", "g"];
       mixResultCircle.style.backgroundColor = '';
       mixResultCircle.textContent = '混合结果';
       mixResultInfo.textContent = '选择 2–4 种颜色后点"开始混合"';
@@ -1933,24 +2039,29 @@
     mixGo.addEventListener('click', function () {
       var items = [];
       for (var i = 0; i < slotCount; i++) {
-        if (slotColors[i] && slotRatios[i] > 0) items.push({ hex: slotColors[i], ratio: slotRatios[i], idx: i });
+        if (slotColors[i] && slotAmounts[i] > 0) items.push({ hex: slotColors[i], amount: slotAmounts[i], unit: slotUnits[i], idx: i });
       }
       if (items.length < 2) return;
-      // 在线性光空间按比率加权混合，再转回 sRGB
-      var lr = 0, lg = 0, lb = 0, totalRatio = 0;
+      // 在线性光空间按用量加权混合，再转回 sRGB
+      var lr = 0, lg = 0, lb = 0, totalAmount = 0;
       items.forEach(function (item) {
         var rgb = hexToRgbArr(item.hex);
-        lr += srgbToLinear(rgb[0]) * item.ratio;
-        lg += srgbToLinear(rgb[1]) * item.ratio;
-        lb += srgbToLinear(rgb[2]) * item.ratio;
-        totalRatio += item.ratio;
+        lr += srgbToLinear(rgb[0]) * item.amount;
+        lg += srgbToLinear(rgb[1]) * item.amount;
+        lb += srgbToLinear(rgb[2]) * item.amount;
+        totalAmount += item.amount;
       });
-      var mixed = rgbToHex(linearToSrgb(lr / totalRatio), linearToSrgb(lg / totalRatio), linearToSrgb(lb / totalRatio));
+      var mixed = rgbToHex(linearToSrgb(lr / totalAmount), linearToSrgb(lg / totalAmount), linearToSrgb(lb / totalAmount));
       mixResultCircle.style.backgroundColor = mixed;
       mixResultCircle.textContent = '';
       var rgb = hexToRgbArr(mixed);
+      // 算百分比
+      var pctLines = items.map(function (item) {
+        var pct = (item.amount / totalAmount * 100).toFixed(1);
+        return '第' + (item.idx + 1) + '种 ' + item.hex + ' ' + item.amount + item.unit + '（' + pct + '%）';
+      });
       mixResultInfo.innerHTML = '混合色 <code>' + mixed + '</code><br>RGB(' + rgb[0] + ', ' + rgb[1] + ', ' + rgb[2] + ')<br>' +
-        items.map(function (item) { return '第' + (item.idx + 1) + '种 ' + item.hex + ' ×' + item.ratio + '份'; }).join('<br>');
+        pctLines.join('<br>');
       // 同步到当前取色，方便加入记录本
       var bridge = window.__mixBridge;
       if (bridge && typeof bridge.setColor === 'function') {
@@ -1970,7 +2081,8 @@
         b.classList.toggle('active', Number(b.getAttribute('data-count')) === slotCount);
       });
       slotColors = [null, null, null, null];
-      slotRatios = [1, 1, 1, 1];
+      slotAmounts = [10, 10, 10, 10];
+      slotUnits = ["g", "g", "g", "g"];
       for (var i = 0; i < slotCount && i < hexes.length; i++) {
         slotColors[i] = String(hexes[i]).toUpperCase();
       }
@@ -2030,7 +2142,19 @@
       { brand: '多乐士', name: '陶土复古', space: '客厅 · 中古风', colors: [
         { n: '陶土', hex: '#C17A56' }, { n: '奶油', hex: '#F6EEDD' }, { n: '橄榄绿', hex: '#7A7A4D' } ] },
       { brand: '多乐士', name: '丁香淡紫', space: '卧室 · 浪漫柔和', colors: [
-        { n: '丁香紫', hex: '#C3B2D6' }, { n: '珍珠白', hex: '#FAF7F2' }, { n: '灰粉', hex: '#D9C2C2' } ] }
+        { n: '丁香紫', hex: '#C3B2D6' }, { n: '珍珠白', hex: '#FAF7F2' }, { n: '灰粉', hex: '#D9C2C2' } ] },
+      { brand: '立邦', name: '曜石黑金', space: '书房 · 轻奢深色', colors: [
+        { n: '曜石黑', hex: '#2B2B2E' }, { n: '香槟金', hex: '#D4AF6A' }, { n: '暖灰', hex: '#A8A5A0' } ] },
+      { brand: '立邦', name: '天空蓝', space: '儿童房 · 清爽', colors: [
+        { n: '天空蓝', hex: '#A8D8EA' }, { n: '云白', hex: '#FDFEFF' }, { n: '柠檬黄', hex: '#F9E076' } ] },
+      { brand: '三棵树', name: '黛瓦灰', space: '外墙/庭院 · 中式', colors: [
+        { n: '黛瓦灰', hex: '#6B7280' }, { n: '粉墙白', hex: '#F5F2EA' }, { n: '木棕', hex: '#8B5E3C' } ] },
+      { brand: '三棵树', name: '樱花粉', space: '卧室 · 温柔', colors: [
+        { n: '樱花粉', hex: '#F2C9D4' }, { n: '奶白', hex: '#FDF8F2' }, { n: '灰豆绿', hex: '#B5C4A8' } ] },
+      { brand: '多乐士', name: '橄榄军绿', space: '客厅 · 复古', colors: [
+        { n: '橄榄绿', hex: '#6B7F3E' }, { n: '奶茶', hex: '#D9BE97' }, { n: '米白', hex: '#F7F3E8' } ] },
+      { brand: '多乐士', name: '珊瑚橙', space: '餐厅 · 活力', colors: [
+        { n: '珊瑚橙', hex: '#F0815C' }, { n: '奶油白', hex: '#FDF6E9' }, { n: '薄荷', hex: '#A8D5BA' } ] }
     ];
 
     var activeBrand = 'all';
