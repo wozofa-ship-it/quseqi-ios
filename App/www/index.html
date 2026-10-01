@@ -229,6 +229,23 @@
     .case-page-btn { border: none; background: var(--card); border-radius: 10px; padding: 10px 20px; font-size: 14px; font-weight: 600; color: var(--accent); }
     .case-page-btn:disabled { opacity: .35; }
     .case-page-info { font-size: 13px; color: var(--tertiary); }
+    /* 视频预览浮层 */
+    .video-sheet-mask { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: none; }
+    .video-sheet-mask.open { display: block; }
+    .video-sheet { position: fixed; left: 0; right: 0; bottom: 0; max-height: 82vh; background: var(--card); border-radius: 20px 20px 0 0; z-index: 201; display: none; flex-direction: column; }
+    .video-sheet.open { display: flex; }
+    .video-sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 6px; }
+    .video-sheet-title { font-size: 16px; font-weight: 700; color: var(--text); }
+    .video-sheet-close { border: none; background: var(--bg); border-radius: 50%; width: 32px; height: 32px; font-size: 16px; color: var(--secondary); }
+    .video-list { overflow-y: auto; padding: 0 16px calc(16px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
+    .video-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: .5px solid var(--separator); }
+    .video-thumb { position: relative; width: 124px; height: 70px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: var(--bg); }
+    .video-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .video-duration { position: absolute; right: 4px; bottom: 4px; background: rgba(0,0,0,.68); color: #fff; font-size: 10px; padding: 2px 5px; border-radius: 4px; }
+    .video-info { flex: 1; min-width: 0; }
+    .video-title { font-size: 13px; color: var(--text); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .video-meta { font-size: 11px; color: var(--tertiary); margin-top: 6px; }
+    .video-loading, .video-empty { text-align: center; padding: 44px 0; color: var(--tertiary); font-size: 14px; }
     .library-status { font-size: 12px; color: var(--tertiary); margin: 6px 0 0; }
 
     /* 配色方案 */
@@ -526,7 +543,7 @@
       </div>
       <div id="caseDbStatus" style="padding:8px 16px 0;font-size:12px;color:var(--tertiary)">正在连接在线案例库…</div>
       <div id="caseList"></div>
-      <p class="section-note" style="padding:0 16px 8px">点色块复制色号，"送去混色"可直接调配；"视频方案"/"图文方案"看网上的实拍案例。</p>
+      <p class="section-note" style="padding:0 16px 8px">点色块复制色号，"送去混色"可直接调配；"视频方案"在 App 内预览 B 站实拍视频，"图文方案"看小红书图文。</p>
       <div style="padding:0 16px 16px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="record-action" type="button" data-official-url="https://www.nipponpaint.com.cn/">立邦官网</button>
         <button class="record-action" type="button" data-official-url="https://www.skshu.com/">三棵树官网</button>
@@ -2337,6 +2354,97 @@
       else window.open(url, '_blank');
     }
 
+    // ---- 网上配色视频预览浮层 ----
+    var videoMask = document.createElement('div');
+    videoMask.className = 'video-sheet-mask';
+    var videoSheet = document.createElement('div');
+    videoSheet.className = 'video-sheet';
+    var videoHead = document.createElement('div');
+    videoHead.className = 'video-sheet-head';
+    var videoTitle = document.createElement('div');
+    videoTitle.className = 'video-sheet-title';
+    videoTitle.textContent = '相关视频';
+    var videoClose = document.createElement('button');
+    videoClose.type = 'button';
+    videoClose.className = 'video-sheet-close';
+    videoClose.textContent = '×';
+    videoHead.appendChild(videoTitle);
+    videoHead.appendChild(videoClose);
+    var videoList = document.createElement('div');
+    videoList.className = 'video-list';
+    videoSheet.appendChild(videoHead);
+    videoSheet.appendChild(videoList);
+    document.body.appendChild(videoMask);
+    document.body.appendChild(videoSheet);
+
+    function closeVideoSheet() {
+      videoMask.classList.remove('open');
+      videoSheet.classList.remove('open');
+    }
+    videoClose.addEventListener('click', closeVideoSheet);
+    videoMask.addEventListener('click', closeVideoSheet);
+
+    function openVideoSheet(keyword, title) {
+      videoTitle.textContent = title + ' · 相关视频';
+      videoList.innerHTML = '<div class="video-loading">正在加载视频…</div>';
+      videoMask.classList.add('open');
+      videoSheet.classList.add('open');
+      var bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quSeQiSearchVideos;
+      if (bridge) {
+        bridge.postMessage(keyword);
+      } else {
+        // 非 App 环境降级：直接跳 B 站搜索
+        closeVideoSheet();
+        openExternal('https://search.bilibili.com/all?keyword=' + encodeURIComponent(keyword));
+      }
+    }
+
+    window.quSeQiVideosResult = function (jsonStr) {
+      var videos = [];
+      try { videos = JSON.parse(jsonStr) || []; } catch (e) { videos = []; }
+      videoList.innerHTML = '';
+      if (!videos.length) {
+        var empty = document.createElement('div');
+        empty.className = 'video-empty';
+        empty.textContent = '暂时没搜到相关视频，换个关键词试试';
+        videoList.appendChild(empty);
+        return;
+      }
+      videos.forEach(function (v) {
+        var item = document.createElement('div');
+        item.className = 'video-item';
+        var thumb = document.createElement('div');
+        thumb.className = 'video-thumb';
+        var img = document.createElement('img');
+        img.src = v.pic;
+        img.setAttribute('loading', 'lazy');
+        img.onerror = function () { img.style.display = 'none'; };
+        thumb.appendChild(img);
+        if (v.duration) {
+          var dur = document.createElement('span');
+          dur.className = 'video-duration';
+          dur.textContent = v.duration;
+          thumb.appendChild(dur);
+        }
+        var info = document.createElement('div');
+        info.className = 'video-info';
+        var t = document.createElement('div');
+        t.className = 'video-title';
+        t.textContent = v.title;
+        var meta = document.createElement('div');
+        meta.className = 'video-meta';
+        meta.textContent = (v.author || '') + (v.play ? ' · ' + v.play + '播放' : '');
+        info.appendChild(t);
+        info.appendChild(meta);
+        item.appendChild(thumb);
+        item.appendChild(info);
+        item.addEventListener('click', function () {
+          openExternal('https://www.bilibili.com/video/' + v.bvid);
+        });
+        videoList.appendChild(item);
+      });
+    };
+
     var CASES = [
       { brand: '立邦', name: '心岛绿·客厅', space: '客厅 · 2025年度色"心岛"主题', colors: [
         { n: '狮峰龍井绿', hex: '#7A9B7E' }, { n: '米白', hex: '#F5F1E8' }, { n: '原木色', hex: '#C8A97E' } ] },
@@ -2574,18 +2682,24 @@
           // 网上视频 / 图文方案入口
           var webRow = document.createElement('div');
           webRow.style.cssText = 'display:flex;gap:8px;margin-top:8px';
-          function webBtn(label, url) {
-            var b = document.createElement('button');
-            b.type = 'button';
-            b.className = 'record-action';
-            b.style.cssText = 'flex:1;padding:10px;font-size:13px';
-            b.textContent = label;
-            b.addEventListener('click', function () { openExternal(url); });
-            return b;
-          }
-          var kw = encodeURIComponent(c.name + '装修配色');
-          webRow.appendChild(webBtn('视频方案', 'https://search.bilibili.com/all?keyword=' + kw));
-          webRow.appendChild(webBtn('图文方案', 'https://www.xiaohongshu.com/search_result?keyword=' + kw));
+          var videoBtn = document.createElement('button');
+          videoBtn.type = 'button';
+          videoBtn.className = 'record-action';
+          videoBtn.style.cssText = 'flex:1;padding:10px;font-size:13px';
+          videoBtn.textContent = '视频方案';
+          videoBtn.addEventListener('click', function () {
+            openVideoSheet(c.name + '装修配色', c.name);
+          });
+          var picBtn = document.createElement('button');
+          picBtn.type = 'button';
+          picBtn.className = 'record-action';
+          picBtn.style.cssText = 'flex:1;padding:10px;font-size:13px';
+          picBtn.textContent = '图文方案';
+          picBtn.addEventListener('click', function () {
+            openExternal('https://www.xiaohongshu.com/search_result?keyword=' + encodeURIComponent(c.name + '装修配色'));
+          });
+          webRow.appendChild(videoBtn);
+          webRow.appendChild(picBtn);
           body.appendChild(webRow);
           card.appendChild(strip);
           card.appendChild(body);
