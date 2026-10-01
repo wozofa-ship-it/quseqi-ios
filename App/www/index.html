@@ -166,6 +166,11 @@
       border: .5px solid var(--separator); box-shadow: var(--shadow);
     }
     .nippon-code { font-size: 17px; font-weight: 700; }
+    .nippon-code.tappable { color: #0A84FF; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+    .nippon-code.tappable:active { opacity: .6; }
+    .official-check { margin-top: 10px; background: none; border: none; padding: 4px 0; font-size: 13px; color: #0A84FF; cursor: pointer; }
+    .official-check[hidden] { display: none; }
+    .official-check:active { opacity: .6; }
     .nippon-hex { font-size: 14px; color: var(--tertiary); font-family: ui-monospace, monospace; margin-left: auto; }
     .candidate-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; font-size: 13px; color: var(--secondary); }
     .candidate-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--bg); border-radius: 8px; padding: 6px 10px 6px 6px; cursor: pointer; }
@@ -463,6 +468,7 @@
                 <span class="nippon-hex" id="nipponHex">—</span>
               </div>
               <p class="candidate-list" id="candidateList">取色后显示另外四个相近色号，点选可切换</p>
+              <button class="official-check" id="nipponOfficialBtn" type="button" hidden>在立邦官网查看该色号 ↗</button>
               <p class="library-status" id="libraryStatus">正在准备内置色卡…</p>
             </section>
             
@@ -745,6 +751,7 @@
       var nipponHex = document.getElementById('nipponHex');
       var matchDistance = document.getElementById('matchDistance');
       var candidateList = document.getElementById('candidateList');
+      var nipponOfficialBtn = document.getElementById('nipponOfficialBtn');
       var libraryStatus = document.getElementById('libraryStatus');
       var schemeTabs = Array.prototype.slice.call(document.querySelectorAll('[data-scheme]'));
       var ratioMain = document.getElementById('ratioMain');
@@ -800,6 +807,19 @@
         clearTimeout(toastTimer);
         toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 1500);
       }
+
+      // 点色号 → 立邦官网该色号详情页（官网站内搜索会自动定位到该色号）
+      function openNipponColor(code) {
+        if (!code || code === '—') { showToast('请先取色'); return; }
+        var url = 'https://www.nipponpaint.com.cn/search?searchText=' + encodeURIComponent(code);
+        var bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quSeQiOpenURL;
+        if (bridge) bridge.postMessage(url);
+        else window.open(url, '_blank');
+      }
+      nipponCode.classList.add('tappable');
+      nipponCode.setAttribute('role', 'link');
+      nipponCode.addEventListener('click', function () { openNipponColor(currentNipponCode); });
+      nipponOfficialBtn.addEventListener('click', function () { openNipponColor(currentNipponCode); });
 
       function componentToHex(value) {
         return value.toString(16).padStart(2, '0').toUpperCase();
@@ -910,6 +930,7 @@
         nipponColor.style.backgroundColor = best.color.hex;
         matchDistance.textContent = 'ΔE ' + best.distance.toFixed(1) + ' · ' + deltaQuality(best.distance);
         candidateList.innerHTML = '';
+        nipponOfficialBtn.hidden = false;
         closest.slice(1).forEach(function (item) {
           var wrap = document.createElement('span');
           wrap.className = 'candidate-chip';
@@ -2362,6 +2383,14 @@
       else openExternal('https://search.bilibili.com/all?keyword=' + encodeURIComponent(keyword));
     }
 
+    // 图文方案：App 内优先跳小红书 App 搜索；没装则走百度站内搜（小红书网页版已不可用）
+    function openCaseImages(c) {
+      var keyword = (c && c.video_keyword) || ((c && c.name) + '装修配色');
+      var bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quSeQiOpenXiaohongshu;
+      if (bridge) bridge.postMessage(keyword);
+      else openExternal('https://www.baidu.com/s?wd=' + encodeURIComponent('site:xiaohongshu.com ' + keyword));
+    }
+
 
 
     var CASES = [
@@ -2631,7 +2660,7 @@
           picBtn.style.cssText = 'flex:1;padding:10px;font-size:13px';
           picBtn.textContent = '图文方案';
           picBtn.addEventListener('click', function () {
-            openExternal('https://www.xiaohongshu.com/search_result?keyword=' + encodeURIComponent(c.name + '装修配色'));
+            openCaseImages(c);
           });
           webRow.appendChild(videoBtn);
           webRow.appendChild(picBtn);
