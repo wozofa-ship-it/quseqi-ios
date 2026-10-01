@@ -26,6 +26,7 @@ struct WebViewContainer: UIViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: "quSeQiRestoreBackup")
         configuration.userContentController.add(context.coordinator, name: "quSeQiOpenURL")
         configuration.userContentController.add(context.coordinator, name: "quSeQiPickImage")
+        configuration.userContentController.add(context.coordinator, name: "quSeQiOpenWeChat")
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.scrollView.bounces = false
@@ -43,6 +44,14 @@ struct WebViewContainer: UIViewRepresentable {
         weak var webView: WKWebView?
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "quSeQiOpenWeChat" {
+                if let url = URL(string: "weixin://") {
+                    DispatchQueue.main.async {
+                        UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                    }
+                }
+                return
+            }
             if message.name == "quSeQiPickImage" {
                 let source = (message.body as? String) ?? "library"
                 DispatchQueue.main.async { [weak self] in
