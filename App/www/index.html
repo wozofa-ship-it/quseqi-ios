@@ -188,6 +188,11 @@
     .mix-result-info code { font-family: ui-monospace, monospace; color: var(--text); font-weight: 700; }
     .mix-go { width: 100%; border: none; background: var(--accent); color: #fff; border-radius: 12px; padding: 14px; font-size: 16px; font-weight: 700; margin-bottom: 8px; }
     .mix-go:disabled { opacity: .4; }
+    /* 内置色板 */
+    .mix-palette-title { font-size: 14px; font-weight: 700; color: var(--text); margin: 16px 0 10px; }
+    .mix-palette-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
+    .mix-palette-swatch { aspect-ratio: 1; border-radius: 8px; border: .5px solid var(--separator); cursor: pointer; }
+    .mix-palette-swatch:active { transform: scale(.9); }
     .library-status { font-size: 12px; color: var(--tertiary); margin: 6px 0 0; }
 
     /* 配色方案 */
@@ -452,12 +457,14 @@
           <button class="mix-use-current" id="mixClear" type="button">清空</button>
         </div>
         <button class="mix-go" id="mixGo" type="button" disabled>开始混合</button>
+        <div class="mix-palette-title">点选色板填入空位</div>
+        <div class="mix-palette-grid" id="mixPalette"></div>
         <div class="mix-result">
           <div class="mix-result-circle" id="mixResultCircle">混合结果</div>
           <div class="mix-result-info" id="mixResultInfo">选择 2–4 种颜色后点"开始混合"</div>
         </div>
       </div>
-      <p class="section-note" style="padding:0 16px">点圆圈选颜色（系统取色器），或用"当前取色"快速填入。混合在匀光 RGB 空间按等比计算，结果供参考。</p>
+      <p class="section-note" style="padding:0 16px">点下方色板或圆圈选颜色，也可用"当前取色"快速填入。混合在匀光 RGB 空间按等比计算，结果供参考。</p>
     </div>
     <div class="tab-panel" id="tab-notes">
       <section class="notebook-panel" aria-labelledby="notebookHeading">
@@ -1542,9 +1549,43 @@
     var mixResultInfo = document.getElementById('mixResultInfo');
     var mixUseCurrent = document.getElementById('mixUseCurrent');
     var mixClear = document.getElementById('mixClear');
+    var mixPalette = document.getElementById('mixPalette');
     if (!mixSlots) return;
     var slotCount = 2;
     var slotColors = [null, null, null, null]; // 存 hex 字符串
+
+    // 内置色板：常用色，点击填入第一个空位
+    var paletteColors = [
+      '#FF0000', '#FF4500', '#FF6347', '#FF7F50', '#FF8C00', '#FFA500', '#FFD700', '#FFFF00',
+      '#ADFF2F', '#7FFF00', '#32CD32', '#00FF00', '#00FA9A', '#00CED1', '#00BFFF', '#1E90FF',
+      '#0000FF', '#0000CD', '#4B0082', '#8B00FF', '#9400D3', '#FF00FF', '#FF1493', '#DC143C',
+      '#8B0000', '#A52A2A', '#D2691E', '#CD853F', '#DEB887', '#F5DEB3', '#FFF8DC', '#FFFFFF',
+      '#000000', '#2F2F2F', '#555555', '#808080', '#A9A9A9', '#C0C0C0', '#D3D3D3', '#F5F5F5',
+      '#FFC0CB', '#FFB6C1', '#FF69B4', '#DB7093', '#C71585', '#800080', '#6A5ACD', '#483D8B',
+      '#4682B4', '#5F9EA0', '#20B2AA', '#3CB371', '#2E8B57', '#808000', '#BDB76B', '#F0E68C'
+    ];
+    if (mixPalette) {
+      paletteColors.forEach(function (hex) {
+        var sw = document.createElement('div');
+        sw.className = 'mix-palette-swatch';
+        sw.style.backgroundColor = hex;
+        sw.setAttribute('role', 'button');
+        sw.setAttribute('aria-label', '选择颜色 ' + hex);
+        sw.addEventListener('click', function () {
+          var added = false;
+          for (var i = 0; i < slotCount; i++) {
+            if (!slotColors[i]) { slotColors[i] = hex; added = true; break; }
+          }
+          if (!added) {
+            var bridge = window.__mixBridge;
+            if (bridge && bridge.showToast) bridge.showToast('空位已满，可清空后重填');
+            return;
+          }
+          renderSlots();
+        });
+        mixPalette.appendChild(sw);
+      });
+    }
 
     function rgbToHex(r, g, b) {
       function h(v) { return Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0').toUpperCase(); }
