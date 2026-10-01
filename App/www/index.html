@@ -194,7 +194,23 @@
     .mix-palette-title { font-size: 14px; font-weight: 700; color: var(--text); margin: 16px 0 10px; }
     .mix-palette-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
     .mix-palette-swatch { aspect-ratio: 1; border-radius: 8px; border: .5px solid var(--separator); cursor: pointer; }
-    .mix-palette-swatch:active { transform: scale(.9); }
+    /* 案例页签 */
+    .case-filter-row { display: flex; gap: 8px; padding: 12px 12px 0; overflow-x: auto; }
+    .case-filter-btn { flex-shrink: 0; border: none; background: var(--card); border-radius: 16px; padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--secondary); }
+    .case-filter-btn.active { background: var(--accent); color: #fff; }
+    .case-card { background: var(--card); border-radius: 14px; margin: 12px; overflow: hidden; }
+    .case-strip { display: flex; height: 72px; }
+    .case-strip span { flex: 1; cursor: pointer; }
+    .case-body { padding: 12px 16px 14px; }
+    .case-brand { display: inline-block; font-size: 11px; font-weight: 700; color: var(--accent); background: var(--bg); border-radius: 6px; padding: 3px 8px; margin-bottom: 6px; }
+    .case-name { font-size: 16px; font-weight: 700; color: var(--text); }
+    .case-space { font-size: 13px; color: var(--tertiary); margin: 2px 0 8px; }
+    .case-colors { display: flex; gap: 8px; flex-wrap: wrap; }
+    .case-color-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--bg); border-radius: 8px; padding: 5px 10px 5px 5px; font-size: 12px; color: var(--secondary); cursor: pointer; }
+    .case-color-chip:active { opacity: .6; }
+    .case-color-dot { width: 20px; height: 20px; border-radius: 6px; border: .5px solid var(--separator); flex-shrink: 0; }
+    .case-color-chip code { font-family: ui-monospace, monospace; }
+    .case-to-mix { margin-top: 10px; width: 100%; border: none; background: var(--bg); border-radius: 10px; padding: 10px; font-size: 13px; font-weight: 600; color: var(--accent); }
     .library-status { font-size: 12px; color: var(--tertiary); margin: 6px 0 0; }
 
     /* 配色方案 */
@@ -468,6 +484,16 @@
       </div>
       <p class="section-note" style="padding:0 16px">点下方色板或圆圈选颜色，也可用"当前取色"快速填入。混合在匀光 RGB 空间按等比计算，结果供参考。</p>
     </div>
+    <div class="tab-panel" id="tab-cases">
+      <div class="case-filter-row" id="caseFilterRow" role="group" aria-label="品牌筛选">
+        <button class="case-filter-btn active" type="button" data-brand="all">全部</button>
+        <button class="case-filter-btn" type="button" data-brand="立邦">立邦</button>
+        <button class="case-filter-btn" type="button" data-brand="三棵树">三棵树</button>
+        <button class="case-filter-btn" type="button" data-brand="多乐士">多乐士</button>
+      </div>
+      <div id="caseList"></div>
+      <p class="section-note" style="padding:0 16px 16px">案例配色为品牌年度流行色系的参考搭配，点色块复制色号，"送去混色"可直接调配。</p>
+    </div>
     <div class="tab-panel" id="tab-notes">
       <section class="notebook-panel" aria-labelledby="notebookHeading">
         <div class="notebook-head">
@@ -604,6 +630,10 @@
     <button class="tab-btn" type="button" data-tab="tab-mix">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="5"/><circle cx="15" cy="15" r="5"/><path d="M12 12h.01"/></svg>
       混色
+    </button>
+    <button class="tab-btn" type="button" data-tab="tab-cases">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/></svg>
+      案例
     </button>
   </nav>
 
@@ -1898,6 +1928,168 @@
     });
 
     renderSlots();
+
+    // 供案例页签调用：填入颜色到混色槽位
+    window.__fillMixSlots = function (hexes) {
+      hexes = hexes || [];
+      slotCount = Math.min(4, Math.max(2, hexes.length));
+      // 同步模式按钮
+      document.querySelectorAll('.mix-mode-btn').forEach(function (b) {
+        b.classList.toggle('active', Number(b.getAttribute('data-count')) === slotCount);
+      });
+      slotColors = [null, null, null, null];
+      for (var i = 0; i < slotCount && i < hexes.length; i++) {
+        slotColors[i] = String(hexes[i]).toUpperCase();
+      }
+      renderSlots();
+    };
+  })();
+
+  /* 装修案例配色：立邦 / 三棵树 / 多乐士 */
+  (function () {
+    var caseList = document.getElementById('caseList');
+    var filterRow = document.getElementById('caseFilterRow');
+    if (!caseList) return;
+
+    var CASES = [
+      { brand: '立邦', name: '心岛绿·客厅', space: '客厅 · 2025年度色"心岛"主题', colors: [
+        { n: '狮峰龍井绿', hex: '#7A9B7E' }, { n: '米白', hex: '#F5F1E8' }, { n: '原木色', hex: '#C8A97E' } ] },
+      { brand: '立邦', name: '奶油风卧室', space: '卧室 · 温柔治愈', colors: [
+        { n: '奶油白', hex: '#FAF6EF' }, { n: '柔雾粉', hex: '#E8CFC8' }, { n: '浅灰', hex: '#D8D5D0' } ] },
+      { brand: '立邦', name: '森系书房', space: '书房 · 自然宁静', colors: [
+        { n: '灰豆绿', hex: '#9CAF88' }, { n: '亚麻米', hex: '#EDE6D6' }, { n: '胡桃棕', hex: '#6B4F3A' } ] },
+      { brand: '立邦', name: '侘寂原木', space: '全屋 · 侘寂风', colors: [
+        { n: '浅咖', hex: '#C9B99B' }, { n: '暖灰', hex: '#B8B2A7' }, { n: '米白', hex: '#F2EDE4' } ] },
+      { brand: '三棵树', name: '绿薄纱·茶室', space: '茶室/书房 · 2025"清欢"主题', colors: [
+        { n: '绿薄纱', hex: '#A8C3A0' }, { n: '宣纸白', hex: '#F7F4ED' }, { n: '墨棕', hex: '#5C4A3A' } ] },
+      { brand: '三棵树', name: '国潮新中式', space: '客厅 · 国潮艺术漆', colors: [
+        { n: '朱砂红', hex: '#C0483C' }, { n: '米白', hex: '#F5F0E6' }, { n: '胡桃木', hex: '#6E5138' } ] },
+      { brand: '三棵树', name: '莫兰迪雾霾蓝', space: '卧室 · 高级灰调', colors: [
+        { n: '雾霾蓝', hex: '#8FA3B3' }, { n: '高级灰', hex: '#C9C9C7' }, { n: '奶白', hex: '#FAF8F3' } ] },
+      { brand: '三棵树', name: '奶咖温馨', space: '餐厅 · 暖调治愈', colors: [
+        { n: '奶咖', hex: '#D4B896' }, { n: '奶白', hex: '#FBF7EE' }, { n: '浅木', hex: '#D9C29A' } ] },
+      { brand: '多乐士', name: '金盏黄·餐厅', space: '餐厅 · 2025年度色 True Joy', colors: [
+        { n: '金盏黄', hex: '#F2B234' }, { n: '纯白', hex: '#FFFFFF' }, { n: '原木', hex: '#C9A227' } ] },
+      { brand: '多乐士', name: '豆蔻青卧室', space: '卧室/次卧 · 清新自然', colors: [
+        { n: '豆蔻青', hex: '#7BA7A6' }, { n: '浅暖绿', hex: '#C5D9C0' }, { n: '白', hex: '#FEFEFE' } ] },
+      { brand: '多乐士', name: '薄荷儿童房', space: '儿童房 · 清凉活力', colors: [
+        { n: '薄荷绿', hex: '#9FD9C8' }, { n: '奶油黄', hex: '#F7E3A1' }, { n: '白', hex: '#FFFFFF' } ] },
+      { brand: '多乐士', name: '雾蓝客厅', space: '客厅 · 冷暖平衡', colors: [
+        { n: '雾蓝', hex: '#9DB8C9' }, { n: '陶土', hex: '#C67B5C' }, { n: '米白', hex: '#F4EFE6' } ] }
+    ];
+
+    var activeBrand = 'all';
+
+    function copyText(text, done) {
+      function fallback() {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        if (done) done();
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { if (done) done(); }, fallback);
+      } else fallback();
+    }
+
+    function renderCases() {
+      caseList.innerHTML = '';
+      CASES.filter(function (c) { return activeBrand === 'all' || c.brand === activeBrand; })
+        .forEach(function (c) {
+          var card = document.createElement('div');
+          card.className = 'case-card';
+          var strip = document.createElement('div');
+          strip.className = 'case-strip';
+          c.colors.forEach(function (col) {
+            var s = document.createElement('span');
+            s.style.backgroundColor = col.hex;
+            s.title = col.n + ' ' + col.hex;
+            s.addEventListener('click', function () {
+              var bridge = window.__mixBridge;
+              copyText(col.hex, function () {
+                if (bridge && bridge.showToast) bridge.showToast('已复制 ' + col.hex);
+              });
+            });
+            strip.appendChild(s);
+          });
+          var body = document.createElement('div');
+          body.className = 'case-body';
+          var brand = document.createElement('span');
+          brand.className = 'case-brand';
+          brand.textContent = c.brand;
+          var name = document.createElement('div');
+          name.className = 'case-name';
+          name.textContent = c.name;
+          var space = document.createElement('div');
+          space.className = 'case-space';
+          space.textContent = c.space;
+          var colors = document.createElement('div');
+          colors.className = 'case-colors';
+          c.colors.forEach(function (col) {
+            var chip = document.createElement('span');
+            chip.className = 'case-color-chip';
+            var dot = document.createElement('span');
+            dot.className = 'case-color-dot';
+            dot.style.backgroundColor = col.hex;
+            var label = document.createElement('span');
+            label.innerHTML = col.n + ' <code>' + col.hex + '</code>';
+            chip.appendChild(dot);
+            chip.appendChild(label);
+            chip.addEventListener('click', function () {
+              var bridge = window.__mixBridge;
+              copyText(col.hex, function () {
+                if (bridge && bridge.showToast) bridge.showToast('已复制 ' + col.hex);
+              });
+            });
+            colors.appendChild(chip);
+          });
+          var toMix = document.createElement('button');
+          toMix.type = 'button';
+          toMix.className = 'case-to-mix';
+          toMix.textContent = '送去混色';
+          toMix.addEventListener('click', function () {
+            // 把案例颜色填入混色页
+            var evt = new CustomEvent('fillMixSlots', { detail: c.colors.map(function (col) { return col.hex; }) });
+            document.dispatchEvent(evt);
+            // 切换到混色页
+            var mixBtn = document.querySelector('.tab-btn[data-tab="tab-mix"]');
+            if (mixBtn) mixBtn.click();
+          });
+          body.appendChild(brand);
+          body.appendChild(name);
+          body.appendChild(space);
+          body.appendChild(colors);
+          body.appendChild(toMix);
+          card.appendChild(strip);
+          card.appendChild(body);
+          caseList.appendChild(card);
+        });
+    }
+
+    // 接收案例颜色填入混色槽位
+    document.addEventListener('fillMixSlots', function (e) {
+      var hexes = e.detail || [];
+      // 通过全局函数填入（混色 IIFE 暴露）
+      if (window.__fillMixSlots) window.__fillMixSlots(hexes);
+    });
+
+    if (filterRow) {
+      filterRow.querySelectorAll('.case-filter-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          filterRow.querySelectorAll('.case-filter-btn').forEach(function (b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          activeBrand = btn.getAttribute('data-brand');
+          renderCases();
+        });
+      });
+    }
+
+    renderCases();
   })();
   </script>
 </body>
