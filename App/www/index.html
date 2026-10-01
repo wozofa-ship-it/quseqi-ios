@@ -487,6 +487,7 @@
         <div class="mix-result">
           <div class="mix-result-circle" id="mixResultCircle">混合结果</div>
           <div class="mix-result-info" id="mixResultInfo">选择 2–4 种颜色后点"开始混合"</div>
+          <button class="record-action" id="mixSaveBtn" type="button" style="display:none;margin-top:12px">保存这次配色到记录本</button>
         </div>
       </div>
       <p class="section-note" style="padding:0 16px">点下方色板或圆圈选颜色，也可用"当前取色"快速填入。混合在匀光 RGB 空间按等比计算，结果供参考。</p>
@@ -501,11 +502,24 @@
       <div id="caseList"></div>
       <p class="section-note" style="padding:0 16px 8px">案例配色为品牌年度流行色系的参考搭配，点色块复制色号，"送去混色"可直接调配。</p>
       <div style="padding:0 16px 16px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="record-action" type="button" onclick="window.open('https://www.nipponpaint.com.cn/','_blank')">立邦官网</button>
-        <button class="record-action" type="button" onclick="window.open('https://www.skshu.com/','_blank')">三棵树官网</button>
-        <button class="record-action" type="button" onclick="window.open('https://www.dulux.com.cn/','_blank')">多乐士官网</button>
+        <button class="record-action" type="button" data-official-url="https://www.nipponpaint.com.cn/">立邦官网</button>
+        <button class="record-action" type="button" data-official-url="https://www.skshu.com/">三棵树官网</button>
+        <button class="record-action" type="button" data-official-url="https://www.dulux.com.cn/">多乐士官网</button>
       </div>
     </div>
+    <script>
+    // 官网外链：App 内走原生打开，浏览器里走 window.open
+    (function () {
+      function openOfficial(url) {
+        var bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quSeQiOpenURL;
+        if (bridge) bridge.postMessage(url);
+        else window.open(url, '_blank');
+      }
+      document.querySelectorAll('[data-official-url]').forEach(function (btn) {
+        btn.addEventListener('click', function () { openOfficial(btn.getAttribute('data-official-url')); });
+      });
+    })();
+    </script>
     <div class="tab-panel" id="tab-notes">
       <section class="notebook-panel" aria-labelledby="notebookHeading">
         <div class="notebook-head">
@@ -1832,6 +1846,23 @@
         setColor: setColor,
         showToast: showToast
       };
+      // 供混色页签调用：保存混色配方到记录本
+      window.__saveRecipeRecord = function (rec) {
+        if (!rec || !/^#[0-9A-F]{6}$/.test(rec.targetHex)) return false;
+        recipeRecords.unshift({
+          name: String(rec.name || '混色配方').slice(0, 40),
+          targetHex: rec.targetHex,
+          nipponCode: '混色',
+          baseAmount: rec.baseAmount > 0 ? rec.baseAmount : 0,
+          baseUnit: rec.baseUnit === 'ml' ? 'ml' : 'g',
+          tints: (rec.tints || []).slice(0, 30),
+          createdAt: new Date().toISOString()
+        });
+        renderRecords();
+        autoBackupRecords();
+        showToast('已保存到记录本');
+        return true;
+      };
     }());
   </script>
 
@@ -1858,6 +1889,8 @@
     var mixUseCurrent = document.getElementById('mixUseCurrent');
     var mixClear = document.getElementById('mixClear');
     var mixPalette = document.getElementById('mixPalette');
+    var mixSaveBtn = document.getElementById('mixSaveBtn');
+    var lastMixResult = null;
     if (!mixSlots) return;
     var slotCount = 2;
     var slotColors = [null, null, null, null]; // 存 hex 字符串
@@ -2033,8 +2066,19 @@
       mixResultCircle.style.backgroundColor = '';
       mixResultCircle.textContent = '混合结果';
       mixResultInfo.textContent = '选择 2–4 种颜色后点"开始混合"';
+      lastMixResult = null;
+      if (mixSaveBtn) mixSaveBtn.style.display = 'none';
       renderSlots();
     });
+
+    // 保存这次配色到记录本（用户点才存，不点不存）
+    if (mixSaveBtn) {
+      mixSaveBtn.addEventListener('click', function () {
+        if (!lastMixResult) return;
+        if (window.__saveRecipeRecord) window.__saveRecipeRecord(lastMixResult);
+        else if (window.__mixBridge && window.__mixBridge.showToast) window.__mixBridge.showToast('当前环境不支持保存');
+      });
+    }
 
     mixGo.addEventListener('click', function () {
       var items = [];
@@ -2062,6 +2106,17 @@
       });
       mixResultInfo.innerHTML = '混合色 <code>' + mixed + '</code><br>RGB(' + rgb[0] + ', ' + rgb[1] + ', ' + rgb[2] + ')<br>' +
         pctLines.join('<br>');
+      // 记下这次配色，供"保存到记录本"
+      lastMixResult = {
+        name: '混色 ' + mixed,
+        targetHex: mixed,
+        baseAmount: totalAmount,
+        baseUnit: items[0].unit,
+        tints: items.map(function (item) {
+          return { name: '第' + (item.idx + 1) + '种 ' + item.hex, amount: item.amount, unit: item.unit };
+        })
+      };
+      mixSaveBtn.style.display = '';
       // 同步到当前取色，方便加入记录本
       var bridge = window.__mixBridge;
       if (bridge && typeof bridge.setColor === 'function') {
