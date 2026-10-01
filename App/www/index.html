@@ -7,701 +7,314 @@
   <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#111316" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="data:," />
-  <title>取色器</title>
+  <title>涂料配色</title>
   <style>
     :root {
       color-scheme: light dark;
-      --bg: #f4f5f7;
-      --surface: #ffffff;
-      --surface-2: #eef0f3;
-      --text: #15171a;
-      --muted: #626870;
-      --line: #dfe2e6;
-      --accent: #087e8b;
-      --accent-hover: #066d78;
-      --accent-soft: #dff2f3;
-      --button-text: #ffffff;
-      --shadow: 0 12px 34px rgba(21, 31, 38, .10);
-      --checker-a: #eef0f2;
-      --checker-b: #fafafa;
-      --focus: #0a8896;
-      --danger: #a6453d;
+      --bg: #f2f2f7;
+      --card: #ffffff;
+      --text: #000000;
+      --secondary: #3c3c43;
+      --tertiary: #8e8e93;
+      --separator: #c6c6c8;
+      --accent: #007aff;
+      --accent-tap: #0051d5;
+      --danger: #ff3b30;
+      --nav-blur: rgba(242,242,247,.78);
+      --tab-blur: rgba(249,249,249,.78);
+      --shadow: 0 1px 4px rgba(0,0,0,.06);
     }
-
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #111316;
-        --surface: #1b1e22;
-        --surface-2: #24282d;
-        --text: #f2f3f4;
-        --muted: #aeb4bb;
-        --line: #343941;
-        --accent: #41b6c2;
-        --accent-hover: #55c8d2;
-        --accent-soft: #16363a;
-        --button-text: #081315;
-        --shadow: 0 14px 36px rgba(0, 0, 0, .30);
-        --checker-a: #202328;
-        --checker-b: #272b30;
-        --focus: #6ed3dc;
-        --danger: #f08f85;
+        --bg: #000000;
+        --card: #1c1c1e;
+        --text: #ffffff;
+        --secondary: #ebebf5;
+        --tertiary: #98989f;
+        --separator: #38383a;
+        --accent: #0a84ff;
+        --accent-tap: #409cff;
+        --danger: #ff453a;
+        --nav-blur: rgba(0,0,0,.72);
+        --tab-blur: rgba(28,28,30,.72);
+        --shadow: 0 1px 6px rgba(0,0,0,.35);
       }
     }
-
-    * { box-sizing: border-box; }
-    html { min-height: 100%; background: var(--bg); }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; }
     body {
-      margin: 0;
-      min-height: 100vh;
-      min-height: 100svh;
-      font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      font-family: -apple-system, "SF Pro SC", "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; min-height: 100dvh;
       -webkit-font-smoothing: antialiased;
-      -webkit-tap-highlight-color: transparent;
+      padding-bottom: calc(83px + env(safe-area-inset-bottom));
     }
-    button, input, select { font: inherit; }
-    button { -webkit-appearance: none; }
+    button { font: inherit; -webkit-appearance: none; appearance: none; }
 
-    .app {
-      width: min(1040px, 100%);
-      margin: 0 auto;
-      padding: max(28px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+    /* 顶部导航栏 */
+    .navbar {
+      position: sticky; top: 0; z-index: 50;
+      background: var(--nav-blur);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: .5px solid var(--separator);
+      padding: calc(12px + env(safe-area-inset-top)) 16px 10px;
     }
+    .navbar h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -.02em; }
+    .navbar p { margin: 2px 0 0; font-size: 13px; color: var(--tertiary); }
 
-    .intro {
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 24px;
-      margin-bottom: 22px;
-    }
-    h1 {
-      margin: 0 0 7px;
-      font-size: clamp(28px, 4vw, 42px);
-      line-height: 1.08;
-      letter-spacing: -.035em;
-      font-weight: 700;
-    }
-    .intro p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 15px;
-      line-height: 1.65;
-    }
-    .offline-btn {
-      flex: 0 0 auto;
-      min-height: 40px;
-      padding: 9px 13px;
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: var(--surface);
-      color: var(--text);
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
-    }
-    .offline-btn svg { width: 17px; height: 17px; }
+    .app { padding: 12px 16px 20px; max-width: 720px; margin: 0 auto; }
 
-    .picker-shell {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 292px;
-      align-items: start;
-      gap: 18px;
-    }
+    /* 页签 */
+    .tab-panel { display: none; animation: fadein .22s ease; }
+    .tab-panel.active { display: block; }
+    @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-    .stage-card,
-    .result-panel {
-      background: var(--surface);
-      border: 1px solid var(--line);
-      box-shadow: var(--shadow);
+    /* iOS 卡片 */
+    .card, .stage-card, .result-panel, .notebook-panel, .advice-panel, .palette-card {
+      background: var(--card); border-radius: 12px;
+      box-shadow: var(--shadow); margin-bottom: 14px; overflow: hidden;
     }
-    .stage-card { border-radius: 20px; overflow: hidden; }
+    .card-pad { padding: 16px; }
+    .section-title { margin: 0 0 4px; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+    .section-note { margin: 0; font-size: 13px; color: var(--tertiary); line-height: 1.5; }
+
+    /* 取色区 */
     .stage-toolbar {
-      min-height: 62px;
-      padding: 10px 12px 10px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-bottom: .5px solid var(--separator);
     }
-    .file-name {
-      min-width: 0;
-      color: var(--muted);
-      font-size: 13px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+    .file-name { font-size: 15px; font-weight: 600; }
     .change-btn {
-      flex: 0 0 auto;
-      border: 0;
-      border-radius: 9px;
-      padding: 8px 11px;
-      color: var(--text);
-      background: var(--surface-2);
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
+      border: none; background: none; color: var(--accent);
+      font-size: 15px; padding: 6px 4px;
     }
+    .change-btn:active { color: var(--accent-tap); }
     .precision-bar {
-      min-height: 50px;
-      padding: 8px 12px 8px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      border-bottom: 1px solid var(--line);
-      background: color-mix(in srgb, var(--surface-2) 48%, var(--surface));
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; border-bottom: .5px solid var(--separator); gap: 8px;
     }
-    .sample-choice { display: flex; align-items: center; gap: 5px; }
-    .sample-choice > span { margin-right: 3px; color: var(--muted); font-size: 12px; font-weight: 600; }
-    .sample-btn,
+    .sample-choice { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--tertiary); }
+    .sample-btn {
+      border: none; background: var(--bg); color: var(--text);
+      font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 16px;
+    }
+    .sample-btn.active { background: var(--accent); color: #fff; }
     .calibrate-btn {
-      min-height: 32px;
-      border: 1px solid transparent;
-      border-radius: 8px;
-      background: transparent;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 600;
+      border: none; background: none; color: var(--accent); font-size: 14px; padding: 6px 4px;
     }
-    .sample-btn { padding: 6px 9px; }
-    .sample-btn.active {
-      border-color: var(--line);
-      background: var(--surface);
-      color: var(--text);
-      box-shadow: 0 1px 3px rgba(0,0,0,.06);
-    }
-    .calibrate-btn { padding: 6px 9px; color: var(--accent); background: var(--accent-soft); }
-    .calibrate-btn.pending { color: var(--button-text); background: var(--accent); }
-    .calibrate-btn:disabled { opacity: .5; cursor: not-allowed; }
-
-    .stage {
-      position: relative;
-      min-height: 455px;
-      display: grid;
-      place-items: center;
-      overflow: hidden;
-      background-color: var(--checker-b);
-      background-image:
-        linear-gradient(45deg, var(--checker-a) 25%, transparent 25%),
-        linear-gradient(-45deg, var(--checker-a) 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, var(--checker-a) 75%),
-        linear-gradient(-45deg, transparent 75%, var(--checker-a) 75%);
-      background-size: 20px 20px;
-      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
-    }
-    .canvas-wrap {
-      position: relative;
-      display: none;
-      max-width: 100%;
-      max-height: min(68vh, 720px);
-      line-height: 0;
-      touch-action: manipulation;
-    }
-    .canvas-wrap.ready { display: block; }
-    #imageCanvas {
-      display: block;
-      width: auto;
-      height: auto;
-      max-width: 100%;
-      max-height: min(68vh, 720px);
-      cursor: crosshair;
-    }
-    .target {
-      position: absolute;
-      width: 28px;
-      height: 28px;
-      border: 2px solid white;
-      border-radius: 50%;
-      box-shadow: 0 0 0 1px rgba(0,0,0,.75), 0 2px 6px rgba(0,0,0,.35);
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      display: none;
-    }
-    .target::before,
-    .target::after {
-      content: "";
-      position: absolute;
-      background: white;
-      box-shadow: 0 0 0 .5px rgba(0,0,0,.55);
-    }
-    .target::before { width: 8px; height: 1px; left: 8px; top: 11.5px; }
-    .target::after { width: 1px; height: 8px; left: 11.5px; top: 8px; }
-
-    .empty {
-      width: 100%;
-      max-width: 440px;
-      padding: 48px 28px;
-      text-align: center;
-    }
-    .empty-icon {
-      width: 82px;
-      height: 82px;
-      margin: 0 auto 20px;
-      display: grid;
-      place-items: center;
-      color: var(--accent);
-      background: var(--accent-soft);
-      border-radius: 24px 24px 24px 8px;
-    }
-    .empty-icon svg { width: 41px; height: 41px; }
-    .empty h2 { margin: 0 0 8px; font-size: 20px; line-height: 1.35; }
-    .empty p { margin: 0 auto 24px; max-width: 320px; color: var(--muted); font-size: 14px; line-height: 1.65; }
-    .choose-actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+    .calibrate-btn:disabled { color: var(--tertiary); opacity: .5; }
+    .stage { position: relative; min-height: 300px; background: var(--bg); }
+    .empty { padding: 48px 24px; text-align: center; }
+    .empty-icon { width: 64px; height: 64px; margin: 0 auto 14px; color: var(--tertiary); }
+    .empty-icon svg { width: 100%; height: 100%; }
+    .empty h2 { margin: 0 0 6px; font-size: 19px; font-weight: 700; }
+    .empty p { margin: 0 0 20px; font-size: 14px; color: var(--tertiary); }
+    .choose-actions { display: flex; gap: 10px; justify-content: center; }
     .choose-btn {
-      min-height: 44px;
-      padding: 10px 16px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: var(--surface);
-      color: var(--text);
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
+      display: inline-flex; align-items: center; gap: 8px;
+      border: none; border-radius: 12px; padding: 13px 22px;
+      font-size: 16px; font-weight: 600; background: var(--bg); color: var(--accent);
     }
-    .choose-btn.primary { border-color: var(--accent); background: var(--accent); color: var(--button-text); }
-    .choose-btn svg { width: 18px; height: 18px; flex: 0 0 auto; }
+    .choose-btn svg { width: 20px; height: 20px; }
+    .choose-btn.primary { background: var(--accent); color: #fff; }
+    .choose-btn.primary:active { background: var(--accent-tap); }
+    .canvas-wrap { position: relative; }
+    .canvas-wrap canvas { display: block; width: 100%; touch-action: none; }
+    .target {
+      position: absolute; width: 28px; height: 28px; border: 3px solid #fff;
+      border-radius: 50%; box-shadow: 0 0 0 1.5px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.3);
+      transform: translate(-50%,-50%); pointer-events: none; display: none;
+    }
 
-    .result-panel {
-      position: sticky;
-      top: 18px;
-      border-radius: 16px;
-      overflow: hidden;
-    }
+    /* 取色结果 */
     .swatch {
-      position: relative;
-      height: 164px;
-      background: #087e8b;
-      transition: background-color .12s ease;
+      height: 120px; position: relative;
+      border-bottom: .5px solid var(--separator);
     }
     .loupe {
-      display: none;
-      position: absolute;
-      z-index: 1;
-      right: 14px;
-      bottom: 14px;
-      width: 78px;
-      height: 78px;
-      border: 3px solid rgba(255,255,255,.92);
-      border-radius: 14px;
-      background: #fff;
-      box-shadow: 0 3px 14px rgba(0,0,0,.3);
-      image-rendering: pixelated;
+      position: absolute; right: 14px; bottom: 14px;
+      border-radius: 50%; border: 3px solid rgba(255,255,255,.9);
+      box-shadow: 0 2px 10px rgba(0,0,0,.25); background: #fff;
     }
-    .swatch.has-color .loupe { display: block; }
-    .result-body { padding: 20px; }
-    .result-label { margin: 0 0 5px; color: var(--muted); font-size: 12px; font-weight: 600; }
-    .hex-value {
-      margin: 0 0 17px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 31px;
-      line-height: 1.15;
-      letter-spacing: .02em;
-      font-weight: 700;
-    }
-    .value-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center;
-      gap: 10px;
-      padding: 11px 0;
-      border-top: 1px solid var(--line);
-    }
-    .value-row code {
-      min-width: 0;
-      color: var(--text);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 14px;
-      overflow-wrap: anywhere;
-    }
-    .nippon-result {
-      margin-top: 14px;
-      padding-top: 15px;
-      border-top: 1px solid var(--line);
-    }
-    .nippon-heading {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 11px;
-    }
-    .nippon-heading strong { font-size: 13px; font-weight: 700; }
-    .approx-badge {
-      flex: 0 0 auto;
-      padding: 3px 7px;
-      border-radius: 999px;
-      color: var(--accent);
-      background: var(--accent-soft);
-      font-size: 10px;
-      font-weight: 700;
-    }
-    .nippon-match {
-      display: grid;
-      grid-template-columns: 32px minmax(0, 1fr);
-      column-gap: 10px;
-      align-items: center;
-    }
-    .nippon-color {
-      grid-row: 1 / span 2;
-      width: 32px;
-      height: 32px;
-      border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
-      border-radius: 8px;
-      background: var(--surface-2);
-    }
-    .nippon-code,
-    .nippon-hex {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      overflow-wrap: anywhere;
-    }
-    .nippon-code { font-size: 16px; line-height: 1.2; font-weight: 700; }
-    .nippon-hex { margin-top: 3px; color: var(--muted); font-size: 12px; line-height: 1.2; }
-    .candidate-list { margin: 9px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
-    .candidate-list code { color: var(--text); font-size: 11px; }
-    .library-status { margin: 7px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
-    .library-status.error { color: var(--danger); }
-    .palette-result {
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 1px solid var(--line);
-    }
-    .palette-heading {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .palette-heading strong { font-size: 13px; }
-    .scheme-tabs { display: flex; gap: 3px; }
-    .scheme-tab {
-      min-height: 28px;
-      padding: 4px 7px;
-      border: 0;
-      border-radius: 7px;
-      background: transparent;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 11px;
-      font-weight: 700;
-    }
-    .scheme-tab.active { color: var(--accent); background: var(--accent-soft); }
-    .ratio-strip {
-      height: 38px;
-      display: flex;
-      overflow: hidden;
-      border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
-      border-radius: 10px;
-      background: var(--surface-2);
-    }
-    .ratio-color { min-width: 0; transition: background-color .12s ease; }
-    .ratio-color[data-ratio="60"] { flex: 6; }
-    .ratio-color[data-ratio="30"] { flex: 3; }
-    .ratio-color[data-ratio="10"] { flex: 1; }
-    .ratio-list { margin-top: 9px; display: grid; gap: 6px; }
-    .ratio-item {
-      display: grid;
-      grid-template-columns: 18px 36px minmax(0, 1fr) auto;
-      align-items: center;
-      gap: 7px;
-      color: var(--muted);
-      font-size: 11px;
-    }
-    .ratio-dot {
-      width: 18px;
-      height: 18px;
-      border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
-      border-radius: 5px;
-      background: var(--surface-2);
-    }
-    .ratio-item b { color: var(--text); font-size: 12px; }
-    .ratio-item code { color: var(--text); font-size: 11px; }
-    .copy-palette {
-      width: 100%;
-      min-height: 34px;
-      margin-top: 10px;
-      border: 1px solid var(--line);
-      border-radius: 9px;
-      color: var(--accent);
-      background: var(--surface);
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .copy-palette:disabled { opacity: .5; cursor: not-allowed; }
+    .result-body { padding: 14px 16px 16px; }
+    .result-label { margin: 0; font-size: 13px; color: var(--tertiary); }
+    .hex-value { margin: 4px 0 8px; font-size: 30px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+    .value-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+    .value-row code { font-size: 14px; color: var(--secondary); font-family: ui-monospace, monospace; }
     .copy-btn {
-      border: 0;
-      border-radius: 8px;
-      padding: 7px 10px;
-      color: var(--accent);
-      background: var(--accent-soft);
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 700;
+      border: none; background: var(--bg); color: var(--accent);
+      font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 8px; flex-shrink: 0;
     }
-    .copy-all {
-      width: 100%;
-      min-height: 44px;
-      margin-top: 8px;
-      border: 0;
-      border-radius: 11px;
-      color: var(--button-text);
-      background: var(--accent);
-      cursor: pointer;
-      font-weight: 700;
+    .copy-btn:disabled { opacity: .4; }
+    .copy-btn:active { background: var(--separator); }
+
+    /* 立邦色 */
+    .nippon-result { border-top: .5px solid var(--separator); margin-top: 12px; padding-top: 12px; }
+    .nippon-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .nippon-heading strong { font-size: 16px; font-weight: 700; }
+    .approx-badge {
+      font-size: 12px; font-weight: 600; color: var(--accent);
+      background: rgba(0,122,255,.12); padding: 4px 10px; border-radius: 10px;
     }
-    .copy-all:disabled,
-    .copy-btn:disabled { opacity: .5; cursor: not-allowed; }
-    button:active, .choose-btn:active { transform: translateY(1px); }
-    button:focus-visible, .choose-btn:focus-visible, input:focus-visible + label {
-      outline: 3px solid color-mix(in srgb, var(--focus) 35%, transparent);
-      outline-offset: 2px;
+    .nippon-match { display: flex; align-items: center; gap: 12px; }
+    .nippon-color {
+      width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0;
+      border: .5px solid var(--separator); box-shadow: var(--shadow);
     }
-    .notebook {
-      margin-top: 26px;
-      display: grid;
-      grid-template-columns: minmax(0, 1.08fr) minmax(320px, .92fr);
-      gap: 18px;
-      align-items: start;
+    .nippon-code { font-size: 17px; font-weight: 700; }
+    .nippon-hex { font-size: 14px; color: var(--tertiary); font-family: ui-monospace, monospace; margin-left: auto; }
+    .candidate-list { font-size: 13px; color: var(--tertiary); margin: 10px 0 0; line-height: 1.6; }
+    .library-status { font-size: 12px; color: var(--tertiary); margin: 6px 0 0; }
+
+    /* 配色方案 */
+    .palette-card { padding: 16px; }
+    .palette-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .palette-heading strong { font-size: 17px; }
+    .scheme-tabs { display: flex; background: var(--bg); border-radius: 9px; padding: 2px; }
+    .scheme-tab {
+      border: none; background: none; font-size: 13px; font-weight: 600;
+      padding: 6px 14px; border-radius: 7px; color: var(--text);
     }
-    .notebook-panel,
-    .advice-panel {
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 16px;
+    .scheme-tab.active { background: var(--card); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+    .ratio-strip { display: flex; height: 64px; border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
+    .ratio-color { display: block; }
+    .ratio-color[data-ratio="60"] { flex: 60; }
+    .ratio-color[data-ratio="30"] { flex: 30; }
+    .ratio-color[data-ratio="10"] { flex: 10; }
+    .ratio-list { display: flex; flex-direction: column; }
+    .ratio-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 0; border-bottom: .5px solid var(--separator); font-size: 15px;
     }
-    .notebook-panel { padding: 22px; }
-    .notebook-head,
-    .records-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 14px;
+    .ratio-item:last-child { border-bottom: none; }
+    .ratio-dot { width: 26px; height: 26px; border-radius: 50%; border: .5px solid var(--separator); flex-shrink: 0; }
+    .ratio-item b { font-weight: 700; min-width: 38px; }
+    .ratio-item span { color: var(--tertiary); }
+    .ratio-item code { margin-left: auto; font-family: ui-monospace, monospace; font-size: 13px; color: var(--secondary); }
+
+    /* iOS 风格大按钮 */
+    .ios-btn {
+      display: block; width: 100%; border: none; border-radius: 12px;
+      background: var(--accent); color: #fff;
+      font-size: 16px; font-weight: 600; padding: 14px; margin-top: 12px;
     }
-    .notebook h2,
-    .advice-panel h2 { margin: 0; font-size: 20px; line-height: 1.3; }
-    .section-note { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
-    .target-chip {
-      flex: 0 0 auto;
-      min-width: 118px;
-      padding: 8px 10px;
-      border-radius: 9px;
-      background: var(--surface-2);
-      text-align: right;
-    }
-    .target-chip span { display: block; color: var(--muted); font-size: 10px; }
-    .target-chip strong { display: block; margin-top: 2px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
-    .recipe-form { margin-top: 20px; }
-    .field-label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; font-weight: 700; }
-    .field-input,
-    .field-select {
-      width: 100%;
-      min-width: 0;
-      min-height: 42px;
-      padding: 9px 11px;
-      border: 1px solid var(--line);
-      border-radius: 9px;
-      background: var(--bg);
-      color: var(--text);
-    }
-    .base-grid { display: grid; grid-template-columns: minmax(0, 1fr) 120px 92px; gap: 9px; }
-    .tint-block { margin-top: 17px; padding-top: 16px; border-top: 1px solid var(--line); }
-    .tint-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .tint-title strong { font-size: 13px; }
-    .add-tint,
-    .record-action,
-    .import-label {
-      min-height: 34px;
-      padding: 7px 10px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--surface);
-      color: var(--accent);
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .tint-list { margin-top: 10px; display: grid; gap: 8px; }
-    .tint-row {
-      display: grid;
-      grid-template-columns: 24px minmax(0, 1fr) 92px 74px 32px;
-      gap: 7px;
-      align-items: center;
-    }
-    .tint-order { color: var(--muted); font-size: 12px; font-weight: 700; text-align: center; }
-    .remove-tint {
-      width: 32px;
-      height: 34px;
-      padding: 0;
-      border: 0;
-      border-radius: 7px;
-      background: var(--surface-2);
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 18px;
-      line-height: 1;
-    }
-    .ratio-preview {
-      min-height: 36px;
-      margin: 12px 0 0;
-      padding: 8px 10px;
-      border-radius: 8px;
-      background: var(--accent-soft);
-      color: var(--accent);
-      font-size: 12px;
-      line-height: 1.5;
-    }
-    .save-recipe {
-      width: 100%;
-      min-height: 44px;
-      margin-top: 13px;
-      border: 0;
-      border-radius: 10px;
-      background: var(--accent);
-      color: var(--button-text);
-      cursor: pointer;
-      font-weight: 700;
-    }
-    .save-recipe:disabled { opacity: .5; cursor: not-allowed; }
-    .records-column { display: grid; gap: 14px; }
-    .record-tools { display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
-    .record-list { margin-top: 14px; display: grid; gap: 10px; }
-    .record-empty {
-      padding: 28px 16px;
-      border: 1px dashed var(--line);
-      border-radius: 10px;
-      color: var(--muted);
-      text-align: center;
-      font-size: 13px;
-      line-height: 1.6;
-    }
-    .backup-log { margin-top: 14px; }
-    .backup-log h3 { margin: 0 0 2px; font-size: 13px; }
-    .backup-empty { font-size: 12px; color: var(--muted); padding: 8px 0; }
-    .backup-entry { font-size: 12px; color: var(--muted); padding: 7px 0; border-top: 1px solid var(--line); }
-    .backup-entry:first-of-type { border-top: 0; }
-    .recipe-card { padding: 14px; border: 1px solid var(--line); border-radius: 11px; }
-    .recipe-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-    .recipe-card-title { display: flex; align-items: center; gap: 9px; min-width: 0; }
-    .recipe-swatch { width: 30px; height: 30px; flex: 0 0 auto; border: 1px solid color-mix(in srgb, var(--text) 16%, transparent); border-radius: 7px; }
-    .recipe-card h3 { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
-    .recipe-meta { margin-top: 2px; color: var(--muted); font-size: 11px; }
-    .recipe-lines { margin: 11px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-    .recipe-lines li { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 7px; color: var(--muted); font-size: 12px; line-height: 1.4; }
-    .recipe-lines b { color: var(--text); }
-    .recipe-card-actions { margin-top: 11px; display: flex; gap: 7px; }
-    .recipe-card-actions button { min-height: 31px; padding: 6px 9px; border: 0; border-radius: 7px; background: var(--surface-2); color: var(--accent); cursor: pointer; font-size: 11px; font-weight: 700; }
-    .recipe-card-actions .delete-record { color: var(--danger); }
-    .advice-panel { padding: 20px 22px; }
-    .advice-list { margin: 15px 0 0; padding: 0; list-style: none; counter-reset: advice; display: grid; gap: 0; }
-    .advice-list li { counter-increment: advice; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
-    .advice-list li::before { content: counter(advice); width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 800; }
-    .advice-list strong { display: block; font-size: 13px; }
-    .advice-list span { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .ios-btn:active { background: var(--accent-tap); }
+    .ios-btn:disabled { opacity: .4; }
+    .ios-btn.plain { background: var(--bg); color: var(--accent); }
+    .copy-all { margin-top: 12px; }
+
     .hint {
-      margin: 14px 2px 0;
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.55;
+      display: flex; gap: 8px; font-size: 12px; color: var(--tertiary);
+      line-height: 1.6; padding: 0 4px; margin: 4px 0 0;
     }
-    .hint svg { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; }
+    .hint svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 2px; }
+
+    /* 记录本 */
+    .notebook-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 16px 16px 0; }
+    .target-chip {
+      background: var(--bg); border-radius: 10px; padding: 8px 12px;
+      font-size: 12px; color: var(--tertiary); text-align: center; flex-shrink: 0;
+    }
+    .target-chip strong { display: block; font-size: 14px; color: var(--text); margin-top: 2px; }
+    .recipe-form { padding: 14px 16px 16px; }
+    .base-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .field-label { display: block; font-size: 13px; color: var(--tertiary); margin-bottom: 5px; }
+    .field-input, .field-select {
+      width: 100%; border: none; background: var(--bg); border-radius: 10px;
+      padding: 11px 12px; font-size: 15px; color: var(--text);
+    }
+    .tint-block { background: var(--bg); border-radius: 10px; padding: 12px; margin-bottom: 4px; }
+    .tint-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .tint-title strong { font-size: 15px; }
+    .add-tint { border: none; background: none; color: var(--accent); font-size: 14px; font-weight: 600; }
+    .tint-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+    .tint-row input { flex: 1; border: none; background: var(--card); border-radius: 8px; padding: 10px; font-size: 14px; color: var(--text); min-width: 0; }
+    .tint-remove { border: none; background: none; color: var(--danger); font-size: 18px; padding: 6px; }
+    .ratio-preview { font-size: 13px; color: var(--tertiary); margin: 8px 0 0; line-height: 1.5; }
+    .records-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 16px 0; }
+    .record-tools { display: flex; gap: 8px; }
+    .record-action {
+      border: none; background: var(--bg); color: var(--accent);
+      font-size: 14px; font-weight: 600; padding: 8px 14px; border-radius: 9px;
+    }
+    .record-action:disabled { opacity: .4; }
+    .record-list { padding: 12px 16px 16px; }
+    .record-empty { text-align: center; color: var(--tertiary); font-size: 14px; padding: 24px 0; }
+    .record-item { background: var(--bg); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+    .record-item-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .record-swatch { width: 40px; height: 40px; border-radius: 9px; flex-shrink: 0; border: .5px solid var(--separator); }
+    .record-name { font-size: 15px; font-weight: 700; }
+    .record-meta { font-size: 12px; color: var(--tertiary); margin-top: 2px; }
+    .record-detail { font-size: 13px; color: var(--secondary); line-height: 1.6; }
+    .record-del { border: none; background: none; color: var(--danger); font-size: 14px; margin-left: auto; padding: 6px; }
+    .backup-log { border-top: .5px solid var(--separator); padding: 12px 16px 16px; }
+    .backup-log h3 { margin: 0 0 8px; font-size: 15px; }
+    .backup-empty, .backup-item { font-size: 13px; color: var(--tertiary); }
+    .backup-item { padding: 6px 0; border-bottom: .5px solid var(--separator); }
+    .backup-item:last-child { border: none; }
+    .advice-panel { padding: 16px; }
+    .advice-panel h2 { margin: 0 0 10px; font-size: 17px; }
+    .advice-list { margin: 0; padding: 0; list-style: none; }
+    .advice-list li { display: flex; gap: 10px; padding: 9px 0; border-bottom: .5px solid var(--separator); font-size: 14px; }
+    .advice-list li:last-child { border: none; }
+    .advice-list li::before {
+      content: attr(data-n); flex-shrink: 0; width: 22px; height: 22px;
+      background: var(--accent); color: #fff; border-radius: 50%;
+      font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+      margin-top: 1px;
+    }
+    .advice-list strong { display: block; font-size: 14px; margin-bottom: 2px; }
+    .advice-list span { color: var(--tertiary); font-size: 13px; line-height: 1.5; }
+
+    /* 底部 Tab Bar */
+    .tabbar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+      display: flex; background: var(--tab-blur);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      backdrop-filter: blur(20px) saturate(180%);
+      border-top: .5px solid var(--separator);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .tab-btn {
+      flex: 1; border: none; background: none; color: var(--tertiary);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 8px 0 8px; font-size: 10px; font-weight: 500;
+    }
+    .tab-btn svg { width: 25px; height: 25px; }
+    .tab-btn.active { color: var(--accent); }
 
     .toast {
-      position: fixed;
-      z-index: 10;
-      left: 50%;
-      bottom: max(22px, env(safe-area-inset-bottom));
-      transform: translate(-50%, 16px);
-      padding: 10px 15px;
-      border-radius: 10px;
-      background: #181b1f;
-      color: #fff;
-      box-shadow: 0 8px 24px rgba(0,0,0,.28);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .18s ease, transform .18s ease;
-      font-size: 13px;
-      white-space: nowrap;
+      position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom));
+      transform: translateX(-50%) translateY(10px);
+      background: rgba(0,0,0,.8); color: #fff;
+      font-size: 14px; font-weight: 600; padding: 10px 20px; border-radius: 20px;
+      opacity: 0; pointer-events: none; transition: all .25s; z-index: 100;
+      -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
     }
-    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .offline-btn { display: none; }
 
-    @media (hover: hover) {
-      .choose-btn:hover { border-color: var(--accent); }
-      .choose-btn.primary:hover, .copy-all:hover { background: var(--accent-hover); }
-      .change-btn:hover { color: var(--accent); }
+    .copy-palette, .copy-all, .save-recipe {
+      display: block; width: 100%; border: none; border-radius: 12px;
+      background: var(--accent); color: #fff;
+      font-size: 16px; font-weight: 600; padding: 14px; margin-top: 12px;
     }
-    @media (max-width: 760px) {
-      .app { padding-top: max(20px, env(safe-area-inset-top)); }
-      .intro { align-items: flex-start; margin-bottom: 16px; }
-      .intro p { font-size: 14px; }
-      .offline-btn { min-height: 38px; padding: 8px 10px; }
-      .picker-shell { grid-template-columns: 1fr; gap: 14px; }
-      .stage-card { border-radius: 15px; box-shadow: none; }
-      .stage { min-height: 380px; }
-      .result-panel { position: static; display: grid; grid-template-columns: 132px minmax(0, 1fr); border-radius: 14px; box-shadow: none; }
-      .swatch { height: 100%; min-height: 220px; }
-      .loupe { width: 64px; height: 64px; right: 10px; bottom: 10px; }
-      .result-body { padding: 17px 16px; }
-      .hex-value { font-size: 26px; margin-bottom: 13px; }
-      .value-row { padding: 9px 0; }
-      .notebook { grid-template-columns: 1fr; margin-top: 18px; gap: 14px; }
-      .notebook-panel, .advice-panel { box-shadow: none; }
-    }
-    @media (max-width: 430px) {
-      .app { padding-left: max(14px, env(safe-area-inset-left)); padding-right: max(14px, env(safe-area-inset-right)); }
-      .stage-toolbar { min-height: 54px; }
-      .precision-bar { align-items: stretch; flex-direction: column; gap: 7px; padding: 9px 12px; }
-      .sample-choice { justify-content: space-between; }
-      .calibrate-btn { width: 100%; }
-      .stage { min-height: 340px; }
-      .empty { padding: 36px 18px; }
-      .result-panel { grid-template-columns: 108px minmax(0, 1fr); }
-      .swatch { min-height: 216px; }
-      .loupe { width: 56px; height: 56px; }
-      .copy-btn { padding: 7px 8px; }
-      .notebook-panel, .advice-panel { padding: 17px 15px; }
-      .notebook-head, .records-head { align-items: stretch; flex-direction: column; }
-      .target-chip { text-align: left; }
-      .base-grid { grid-template-columns: minmax(0, 1fr) 86px; }
-      .base-grid > div:first-child { grid-column: 1 / -1; }
-      .tint-row { grid-template-columns: 22px minmax(0, 1fr) 72px 62px 30px; gap: 5px; }
-      .field-input, .field-select { padding-left: 8px; padding-right: 8px; }
-      .record-tools { justify-content: flex-start; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
-    }
+    .copy-palette:active, .copy-all:active, .save-recipe:active { opacity: .75; }
+    .copy-palette:disabled, .copy-all:disabled, .save-recipe:disabled { opacity: .4; }
+    .advice-list { counter-reset: adv; }
+    .advice-list li::before { content: counter(adv); counter-increment: adv; }
+
   </style>
 </head>
 <body>
+  <header class="navbar">
+    <h1>涂料配色</h1>
+    <p>拍照取色 · 立邦色卡 · 调色记录</p>
+    <button class="offline-btn" id="offlineBtn" type="button" tabindex="-1" aria-hidden="true"></button>
+  </header>
   <main class="app">
-    <section class="intro" aria-labelledby="page-heading">
-      <div>
-        <h1 id="page-heading">从照片里取色</h1>
-        <p>拍照或选择图片，再轻点画面中的任意位置。</p>
-      </div>
-      <button class="offline-btn" id="offlineBtn" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-        提点意见
-      </button>
-    </section>
-
-    <div class="picker-shell">
+    <div class="tab-panel active" id="tab-pick">
       <section class="stage-card" aria-label="图片取色区域">
         <div class="stage-toolbar">
           <span class="file-name" id="fileName">尚未选择图片</span>
@@ -742,9 +355,7 @@
           </div>
         </div>
       </section>
-
-      <aside>
-        <section class="result-panel" aria-live="polite" aria-label="取色结果">
+      <section class="result-panel" aria-live="polite" aria-label="取色结果">
           <div class="swatch" id="swatch" style="background-color: var(--surface-2)">
             <canvas class="loupe" id="loupe" width="78" height="78" aria-label="取色点放大预览"></canvas>
           </div>
@@ -768,7 +379,18 @@
               <p class="candidate-list" id="candidateList">取色后显示另外两个相近色号</p>
               <p class="library-status" id="libraryStatus">正在准备内置色卡…</p>
             </section>
-            <section class="palette-result" aria-label="配色方案">
+            
+            <button class="copy-all" id="copyHex" type="button" disabled>复制 HEX</button>
+          </div>
+        </section>
+      <p class="hint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+          默认对原图 15×15 像素做抗噪平均；若照片偏黄或偏蓝，可先点“校准白平衡”，再点画面里的白色或中性灰。色号为内置参考库近似值，最终请以立邦小程序或实体色卡复核。
+        </p>
+    </div>
+    <div class="tab-panel" id="tab-palette">
+      <div class="palette-card">
+        <section class="palette-result" aria-label="配色方案">
               <div class="palette-heading">
                 <strong>配色方案</strong>
                 <div class="scheme-tabs" role="group" aria-label="配色风格">
@@ -789,17 +411,10 @@
               </div>
               <button class="copy-palette" id="copyPalette" type="button" disabled>复制配色与比例</button>
             </section>
-            <button class="copy-all" id="copyHex" type="button" disabled>复制 HEX</button>
-          </div>
-        </section>
-        <p class="hint">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
-          默认对原图 15×15 像素做抗噪平均；若照片偏黄或偏蓝，可先点“校准白平衡”，再点画面里的白色或中性灰。色号为内置参考库近似值，最终请以立邦小程序或实体色卡复核。
-        </p>
-      </aside>
+      </div>
+      <p class="section-note" style="padding:0 4px">取色后自动生成配色方案，可在"协调 / 同色 / 对比"三种风格间切换。</p>
     </div>
-
-    <section class="notebook" aria-label="手动调色记录与建议">
+    <div class="tab-panel" id="tab-notes">
       <section class="notebook-panel" aria-labelledby="notebookHeading">
         <div class="notebook-head">
           <div>
@@ -838,9 +453,7 @@
           <p class="section-note">记录只保留在本次打开期间。请点“下载记录”保存到手机；下次用“导入记录”继续复用。</p>
         </div>
       </section>
-
-      <div class="records-column">
-        <section class="notebook-panel" aria-labelledby="recordsHeading">
+      <section class="notebook-panel" aria-labelledby="recordsHeading">
           <div class="records-head">
             <div>
               <h2 id="recordsHeading">我的配方</h2>
@@ -859,8 +472,7 @@
             <div id="backupLogList"><div class="backup-empty">暂无备份记录，下载或导入记录后会记在这里。</div></div>
           </div>
         </section>
-
-        <section class="advice-panel" aria-labelledby="adviceHeading">
+      <section class="advice-panel" aria-labelledby="adviceHeading">
           <h2 id="adviceHeading">手动调色建议</h2>
           <ol class="advice-list">
             <li><div><strong>先做小样</strong><span>先取少量基础漆试调，确认方向后再按同一比例放大，避免整桶报废。</span></div></li>
@@ -870,11 +482,26 @@
             <li><div><strong>干透后定色</strong><span>乳胶漆湿态与干态会有色差。等试片完全干透后，再决定是否继续加色。</span></div></li>
           </ol>
         </section>
-      </div>
-    </section>
+    </div>
   </main>
+  <nav class="tabbar" aria-label="底部导航">
+    <button class="tab-btn active" type="button" data-tab="tab-pick">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+      取色
+    </button>
+    <button class="tab-btn" type="button" data-tab="tab-palette">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="4.5"/><circle cx="16" cy="8" r="4.5"/><circle cx="8" cy="16" r="4.5"/><circle cx="16" cy="16" r="4.5"/></svg>
+      配色
+    </button>
+    <button class="tab-btn" type="button" data-tab="tab-notes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14a1 1 0 0 1 1 1v15l-4-2.5L12 20l-4-2.5L4 20V5a1 1 0 0 1 1-1Z"/><path d="M9 9h6M9 13h6"/></svg>
+      记录本
+    </button>
+  </nav>
 
   <div class="toast" id="toast" role="status">已复制</div>
+
+
 
   <script>window.NIPPON_PALETTE_DATA=[["RC0107-4","#FBFBF6"],["RC0251-4","#F0DCE2"],["RC0260-4","#EFD0DF"],["RC0270-3","#D7AFC7"],["RC0280-2","#C18CAB"],["RC0290-2","#B17795"],["RC0001-2","#A26D91"],["RC0002-4","#FCEFFB"],["RC0003-4","#F3DFF0"],["RC0004-4","#F1D3E9"],["RC0005-4","#EABEDC"],["RC0006-3","#DDA8CE"],["RC0007-2","#CF8BB5"],["RC0008-2","#BC719D"],["RC0009-4","#FCF2F9"],["RC0010-4","#F9E1F3"],["RC0011-4","#F6D3EC"],["RC0012-4","#EDBCDF"],["RC0013-3","#E0A5CF"],["RC0014-2","#D586B8"],["RC0015-2","#C46CA1"],["RC0016-4","#FDF3F8"],["RC0017-4","#F9E2EE"],["RC0210-4","#F4CEE2"],["RC0018-4","#ECC8DC"],["RC0220-3","#E6ADD1"],["RC0230-2","#D589B5"],["RC0240-2","#CA71A4"],["RC0307-4","#FCFBF7"],["RC0019-4","#FFECF1"],["RC0020-4","#FAE0EA"],["RC0310-4","#FECECE"],["RC0320-3","#EAAFCB"],["RC0330-2","#DC89AD"],["RC0340-2","#D47198"],["RC0021-4","#FFF2F7"],["RC0022-4","#FBE1EF"],["RC0023-4","#F8D4E6"],["RC0024-4","#F2BDD8"],["RC0025-3","#EAA9CA"],["RC0026-2","#DD87AD"],["RC0027-2","#D27098"],["RC0028-4","#FFEAED"],["RC0029-4","#FADDE6"],["RC0030-4","#F7D3E2"],["RC0031-4","#ECBAD2"],["RC0032-3","#E0A3C0"],["RC0033-2","#D686A5"],["RC0034-2","#C36B87"],["RC0035-4","#FAF2F6"],["RC0036-4","#FAE2F2"],["RC0037-4","#F8CCE2"],["RC0038-4","#EBB7CC"],["RC0039-3","#E0A3BB"],["RC0040-2","#D2839B"],["RC0041-2","#C06C81"],["RC0042-4","#FFF4F3"],["RC0043-4","#FCE0EC"],["RC0044-4","#FAD3E4"],["RC0045-4","#F5BCD4"],["RC0046-3","#EEA6C1"],["RC0047-2","#E288A6"],["RC0048-2","#D66F8E"],["RC0207-4","#F8F1F0"],["RC0201-4","#FAECEA"],["RC0049-4","#F7DBE2"],["RC0410-4","#F9D0DC"],["RC0420-3","#F2ADC1"],["RC0430-2","#E68DA6"],["RC0440-2","#DD748F"],["RC0050-4","#FDF6F7"],["RC0051-4","#FEE4EC"],["RC0052-4","#FDD7E3"],["RC0053-4","#F2A7BE"],["RC0054-3","#F2A7BD"],["RC0055-2","#E7869E"],["RC0056-2","#DD7189"],["RC0057-4","#FFF2F3"],["RC0058-4","#FFE5ED"],["RC0059-4","#FED8E0"],["RC0060-4","#FBBECF"],["RC0061-3","#F4A7BB"],["RC0062-2","#EB889C"],["RC0063-2","#E17384"],["RC0064-4","#FCEDEB"],["RC8151-4","#FAD9DC"],["RC0065-4","#FAD0D8"],["RC8110-4","#F7BEC6"],["RC8120-3","#EF97A2"],["RC8130-2","#D96E80"],["RC8140-1","#C95C70"],["RC0066-4","#FEF7F9"],["RC0067-4","#FDF0EE"],["RC0068-4","#FFE2E9"],["RC0510-4","#FBC8D3"],["RC0520-3","#F9AEBC"],["RC0530-2","#FD818A"],["RC0540-2","#E87885"],["RC0069-4","#FFEFEE"],["RC0070-4","#FEDEE0"],["RC0071-4","#FCCED4"],["RC0072-4","#F6BAC3"],["RC0073-3","#ECA3AC"],["RC0074-2","#E08388"],["RC0075-2","#CF6F72"],["RC0076-4","#FDEAE8"],["RC0077-4","#FEDEDE"],["RC0078-4","#FDD3D7"],["RC0079-4","#FAC0C6"],["RC0080-3","#F2A9B1"],["RC0081-2","#E98A8E"],["RC0082-2","#DA7274"],["RC0083-4","#FFEFE9"],["RC0084-4","#FFE1E1"],["RC0085-4","#FED1D5"],["RC0086-4","#FAB9C0"],["RC0087-3","#F9A9B3"],["RC0088-2","#F28B92"],["RC0089-2","#E8787E"],["RC0090-4","#FEFEFE"],["RC7901-4","#FBEFE8"],["RC0501-4","#FFECE6"],["RC0610-4","#FBC5C7"],["RC0620-3","#F9A9AD"],["RC0630-2","#EC8E90"],["RC0640-2","#E27676"],["RC0091-4","#FBF2ED"],["RC0092-4","#FFE1DF"],["RC0093-4","#FED2D0"],["RC0094-4","#FABBBE"],["RC0095-3","#FAABB0"],["RC0096-2","#F5908E"],["RC0097-2","#ED7D79"],["RC0098-4","#FBE8E3"],["RC8051-4","#FBD7D6"],["RC0099-4","#FCC5C6"],["RC8010-4","#F7BDBD"],["RC8020-3","#F0999D"],["RC8030-2","#DB6F76"],["RC8040-1","#CF5864"],["RC0401-4","#FBEAE8"],["RC0100-4","#FAE1E8"],["RC0651-4","#FDD6D6"],["RC0660-4","#F8BFC2"],["RC0670-3","#E99CA2"],["RC0680-2","#DE8386"],["RC0690-2","#C96B6B"],["RN0507-4","#FDF2F2"],["RN0308-4","#FAEFEE"],["RN0001-4","#FCE0E6"],["RN0002-4","#F6D2E2"],["RN0003-3","#E6ABBD"],["RN0004-3","#E0A0AD"],["RN0490-2","#BB6C78"],["RN8101-4","#FBF2F3"],["RN8001-4","#FAE8E4"],["RN0408-4","#F7E1E0"],["RN0451-4","#F3CED4"],["RN0460-4","#EFBEC8"],["RN0470-3","#DCA0AE"],["RN0480-2","#CA8492"],["RN0407-4","#FAEDF0"],["RN0208-4","#F8EBEC"],["RN0351-4","#FBE1E8"],["RN0360-4","#F5CEDA"],["RN0370-3","#E3ABBE"],["RN0380-2","#D08EA5"],["RN0390-2","#BA748A"],["RN0005-4","#FFF2F3"],["RN0006-4","#FBDFE7"],["RN0007-4","#F7CFD9"],["RN0008-4","#EEB9CA"],["RN0009-3","#E3A1B5"],["RN0010-2","#D38091"],["RN0011-2","#C46878"],["RN0012-4","#FEECEC"],["RN0013-4","#F9D9E0"],["RN0014-4","#EFCBD4"],["RN0015-4","#E2B5C2"],["RN0016-3","#D29FAF"],["RN0017-2","#BF7E8E"],["RN0018-2","#AF6A78"],["RN0019-4","#FFE2E9"],["RN0020-4","#FADEE1"],["RN0021-4","#EEC8D0"],["RN0022-4","#E5B3BE"],["RN0023-3","#D89DAB"],["RN0024-2","#C67B86"],["RN0025-2","#B56770"],["RN0026-4","#FEF0ED"],["RN0027-4","#F8D5D7"],["RN0028-4","#F2C5C7"],["RN0029-4","#E5ABB0"],["RN0030-3","#D2939A"],["RN0031-2","#C67578"],["RN0032-1","#B96264"],["RN0033-4","#FFF6F5"],["RN0034-4","#FFE3E1"],["RN0551-4","#FAD5D7"],["RN0560-4","#ECB8B9"],["RN0570-3","#D39394"],["RN0580-2","#C97F82"],["RN0590-2","#B16665"],["RN0035-4","#FEEAE3"],["RN0036-4","#F8D5D4"],["RN0037-4","#F1C5C5"],["RN0038-3","#E3ADAE"],["RN0039-3","#D69597"],["RN0040-2","#C57673"],["RN0041-1","#B05E56"],["RN0301-4","#FAEDE9"],["RN0608-4","#FAE6E2"],["RN0751-4","#FACBC6"],["RN0760-4","#EEBCBA"],["RN0770-3","#DE9D9E"],["RN0780-2","#C47A79"],["RN0790-2","#B46361"],["RN0042-4","#F9F5EF"],["RN0043-4","#FBE4E4"],["RN0044-4","#EFC1BF"],["RN0045-4","#F9B9B9"],["RN0046-3","#E89E9D"],["RN0047-3","#E19191"],["RN0048-2","#CE7C7D"],["RN0049-4","#FFFDF7"],["RN0050-4","#FFEEEC"],["RN0051-4","#FCECED"],["RN0710-4","#F2B9B5"],["RN0720-3","#DF9591"],["RN0730-2","#D4827E"],["RN0740-2","#C26963"],["RN0708-4","#FCF2E7"],["RN0607-4","#FBEDE5"],["RN0052-4","#F1C5BC"],["RN0053-4","#ECBAB3"],["RN0054-3","#DD9F97"],["RN0055-2","#D4867B"],["RN0056-2","#B9675E"],["RN0057-4","#FFEDE5"],["RN0058-4","#F5CCC7"],["RN0059-4","#ECBBB5"],["RN0060-3","#DEA39B"],["RN0061-3","#D18D86"],["RN0062-2","#BF7163"],["RN0063-1","#B16155"],["RN0064-4","#FCFBF3"],["RN0065-4","#FDF3F3"],["RN1451-4","#FEDED3"],["RN1460-4","#F5BAB2"],["RN1470-3","#E2998E"],["RN1480-2","#D17D73"],["RN1490-2","#C0695B"],["RN0066-4","#FFF1E5"],["RN1508-4","#FEEBE0"],["RN0067-4","#FFD6C7"],["RN1410-4","#FACEC2"],["RN1420-3","#E5A99E"],["RN1430-2","#DC9586"],["RN1440-2","#C77D6B"],["RN0068-4","#FEF2E9"],["RN0069-4","#FFEDE2"],["RN0070-4","#F9D6CC"],["RN0071-4","#FCCFC2"],["RN0072-3","#E2A899"],["RN0073-2","#CC7B6F"],["RN0074-2","#B6655A"],["RN0075-4","#FFF2EC"],["RN1501-4","#FEF3E6"],["RN1551-4","#FDE0D4"],["RN1560-4","#F9C1B5"],["RN1570-3","#EDA194"],["RN1580-2","#DD8A7A"],["RN1590-2","#CE6F5E"],["RN0707-4","#FBF3E9"],["RN1401-4","#FCEFE1"],["RN0076-4","#FCDACB"],["RN0077-4","#F8D7C7"],["RN1660-4","#F2BDAB"],["RN0078-2","#D48977"],["RN0079-1","#B65C46"],["RA8100-1","#BB4D65"],["RA0500-1","#B84A44"],["RA8000-1","#B63C41"],["RA0300-1","#A03F4D"],["RA0600-1","#A54739"],["RA0400-1","#A53F3E"],["RA1500-1","#DB1E0F"],["RA7900-1","#C75237"],["RA8300-1","#BA433B"],["RA1600-1","#A04E36"],["RA1400-1","#924841"],["RA0700-1","#7D433C"],["RA0800-1","#5B423E"],["OC0601-4","#FDF1E9"],["OC7951-4","#FCE4DD"],["OC7910-4","#F9CEC7"],["OC7920-3","#F8ADA3"],["OC0001-2","#F28E8A"],["OC7930-2","#E38078"],["OC7940-1","#C95F58"],["OC0002-4","#FBFAF2"],["OC0508-4","#FAF1E8"],["OC0701-4","#FDE8DE"],["OC1510-4","#FEE4AC"],["OC1520-3","#FBB7AC"],["OC1530-2","#EF9989"],["OC1540-2","#FF7065"],["OC0003-4","#FFF8F1"],["OC0004-4","#FFE3DD"],["OC0005-4","#FFD5CF"],["OC0006-4","#FEC2BC"],["OC0007-3","#FBB0A9"],["OC0008-2","#F59587"],["OC0009-2","#EF7A6B"],["OC0010-4","#FFF2EA"],["OC0011-4","#FFE6DF"],["OC0012-4","#FFDDD8"],["OC0013-4","#FDC4BE"],["OC0014-3","#FBB0AA"],["OC0015-2","#F59284"],["OC0016-2","#E87E6E"],["OC0017-4","#FFF3E4"],["OC0018-4","#FCDCC9"],["OC1651-4","#FBCEBA"],["OC1610-4","#FAC6B1"],["OC1620-3","#EBA38D"],["OC1630-2","#E19177"],["OC1640-2","#CE775E"],["OC0019-4","#FCE4D6"],["OC0020-4","#F9D5C4"],["OC0021-4","#F2C7B2"],["OC0022-3","#E9B39E"],["OC1670-3","#E4A188"],["OC1680-2","#D88C74"],["OC1690-2","#C67155"],["OC0023-4","#FFF5E6"],["OC0024-4","#F6CEB6"],["OC0025-4","#F2C7AF"],["OC0026-3","#E7B091"],["OC0027-3","#E0A489"],["OC0028-2","#CA8167"],["OC0029-1","#B76249"],["OC0030-4","#FFF7E9"],["OC0031-4","#FEEDDB"],["OC0032-4","#F9DAC4"],["OC0033-3","#DFA685"],["OC0034-2","#D38C6D"],["OC0035-2","#C27958"],["OC0036-1","#B05D40"],["OC2207-4","#FCF3E2"],["OC2201-4","#FEEBD8"],["OC2251-4","#F8D4BE"],["OC2210-4","#F0C5AB"],["OC2220-3","#DEA586"],["OC2230-2","#CE8A6A"],["OC2240-2","#BC795A"],["OC0037-4","#FFF7E7"],["OC0038-4","#FFEFDA"],["OC0039-4","#FCE4CB"],["OC0040-4","#F1C6A5"],["OC0041-3","#E4AC88"],["OC0042-2","#D18B65"],["OC0043-2","#BE7456"],["OC1701-4","#FFF6E4"],["OC0044-4","#FADBC1"],["OC0045-4","#F4CCB1"],["OC2260-4","#F4C7A8"],["OC2270-3","#E2A880"],["OC2280-2","#D49269"],["OC2290-2","#C57D54"],["OC0047-4","#FFF9EC"],["OC0046-4","#FEF6EA"],["OC0048-4","#F8D3B6"],["OC0049-3","#E7B28B"],["OC0050-2","#DD9A6F"],["OC0051-2","#CB865C"],["OC0052-1","#B8683F"],["OC0053-4","#FFF2EB"],["OC0054-4","#FFE7D8"],["OC0055-4","#FFD9C8"],["OC0056-4","#FFCDB9"],["OC0057-3","#FDB39E"],["OC0058-2","#F99977"],["OC0059-2","#F18360"],["OC0060-4","#FFF6E5"],["OC0061-4","#FFE7D4"],["OC0062-4","#FFE0CD"],["OC0063-4","#FFCBB3"],["OC0064-3","#FCB99E"],["OC0065-2","#F89D77"],["OC0066-2","#EB8761"],["OC0067-4","#FDFCFB"],["OC0068-4","#FFEBD8"],["OC0069-4","#FFDDC6"],["OC1710-4","#FFD6BA"],["OC1720-3","#FEB99C"],["OC1730-2","#F99E7A"],["OC1740-2","#EF845D"],["OC0070-4","#FFF3E0"],["OC0071-4","#FFEBD6"],["OC0072-4","#FFDDC3"],["OC0073-4","#FFCDAB"],["OC0074-3","#FFBC97"],["OC0075-2","#FAA06E"],["OC0076-2","#F18C58"],["OC1607-4","#FBF9ED"],["OC2208-4","#FDF2E1"],["OC1751-4","#FFE5CE"],["OC1760-4","#FED5B4"],["OC1770-3","#F7B691"],["OC1780-2","#F3A67B"],["OC1790-2","#E28B5E"],["ON0001-4","#FFF7E3"],["ON8201-4","#FFF3DE"],["ON8251-4","#FFE9CF"],["ON8220-4","#FFCFA8"],["ON8230-3","#FFBB8C"],["ON0002-2","#F88B53"],["ON0056-1","#C86D4C"],["ON0003-4","#FFFAEA"],["ON0004-4","#FFEDD5"],["ON0005-4","#FFE0C0"],["ON0006-4","#FFD2AB"],["ON0007-3","#FFBF91"],["ON0008-2","#FDA568"],["ON0009-2","#F49257"],["ON0010-4","#FFF3DD"],["ON0011-4","#FFF3DD"],["ON8210-4","#FFDEBB"],["ON1820-3","#FBBE8C"],["ON1830-2","#F7AD72"],["ON8240-2","#FBA268"],["ON1840-2","#EB8F55"],["ON0012-4","#FFF6DE"],["ON0013-4","#FFECD1"],["ON0014-4","#FFE2C0"],["ON0015-4","#FFD0A3"],["ON0016-3","#FFC393"],["ON0017-2","#FEA967"],["ON0018-2","#FC9752"],["ON0019-4","#FDF3DD"],["ON0020-4","#FDEED2"],["ON0021-4","#FFE3BD"],["ON0022-4","#FFD39F"],["ON0023-3","#FFC891"],["ON0024-2","#FFB064"],["ON0025-2","#FE9E4E"],["ON0026-4","#FFFAE3"],["ON0027-4","#FFE9C2"],["ON0028-4","#FFE4B8"],["ON0029-4","#FFD398"],["ON0030-3","#FFC783"],["ON0031-2","#FFB35C"],["ON0032-2","#FFA549"],["ON0033-4","#FFFCE3"],["ON1901-4","#FFF8DC"],["ON0034-4","#FFEECB"],["ON1910-4","#FFDDAD"],["ON1920-3","#FFCB89"],["ON1930-2","#FEB665"],["ON1940-2","#FEA249"],["ON1908-4","#FFF5DC"],["ON0035-4","#FFEECF"],["ON1951-4","#FFE9C0"],["ON1960-4","#FFDEAF"],["ON1970-3","#FCC68C"],["ON1980-2","#F8B46D"],["ON1990-2","#EA9F55"],["ON1907-4","#FFFCE5"],["ON2708-4","#FEF5D6"],["ON2751-4","#FFE9B0"],["ON2760-3","#FED08B"],["ON2770-3","#FFCA73"],["ON2780-2","#FDBB51"],["ON2790-2","#F2A741"],["ON0036-4","#FFFDE6"],["ON0037-4","#FFEEC4"],["ON0038-4","#FFE7B1"],["ON0039-4","#FFD994"],["ON0040-3","#FFD17F"],["ON0041-2","#FFBF4B"],["ON0042-2","#FFB433"],["ON0043-4","#FFFCDF"],["ON3608-4","#FEF6D9"],["ON2701-4","#FFF0C6"],["ON2710-4","#FFDB97"],["ON2720-3","#FFCC70"],["ON2730-2","#FFC255"],["ON2740-2","#FFB63D"],["ON0044-4","#FFFFF5"],["ON0045-4","#FFF6DE"],["ON0046-4","#FEE5BA"],["ON0047-3","#FBD9AA"],["ON0048-3","#EDBC85"],["ON0049-2","#DB9E5E"],["ON0050-2","#C7925B"],["ON0067-4","#FFFAE5"],["ON0051-4","#FFFCE2"],["ON0052-4","#FFEFD0"],["ON0053-4","#FEE9C0"],["ON0054-3","#FCDCA7"],["ON0055-3","#F8C58A"],["ON0057-2","#C68E5B"],["ON0059-4","#FFF1D2"],["ON0058-4","#F2ECDC"],["ON0060-4","#FDE3BF"],["ON0061-4","#F8D1A4"],["ON0062-3","#F0C291"],["ON0063-2","#DFAA6E"],["ON0064-2","#D49A5D"],["ON0065-4","#FEF8E6"],["ON0066-4","#FDE7C8"],["ON1810-4","#FED9B0"],["ON0068-4","#F6CEA5"],["ON0069-3","#EAB98F"],["ON0070-2","#DBA16D"],["ON0071-2","#D1915C"],["ON2508-4","#FCF6DF"],["ON0072-4","#FFF0D8"],["ON0073-4","#FCE0C2"],["ON0074-3","#F5C8A1"],["ON0075-3","#F8C59B"],["ON0076-3","#EFB387"],["ON0077-2","#BD855B"],["ON0078-4","#FFFBEB"],["ON0079-4","#FFF2DB"],["ON0080-4","#FBDBB6"],["ON0081-3","#EEBD95"],["ON0082-2","#DE9B6B"],["ON0083-2","#DC996A"],["ON0084-1","#C67945"],["ON0085-4","#FFF6E3"],["ON0086-4","#FEEBD2"],["ON0087-4","#F8D3B2"],["ON0088-4","#F3C9A6"],["ON0089-3","#EBB68E"],["ON0090-2","#E09F6F"],["ON0091-1","#C67445"],["ON0092-4","#FFFAEA"],["ON0093-4","#FFECD1"],["ON1851-4","#FFE7C3"],["ON1860-4","#FBD7B5"],["ON1870-3","#F1B288"],["ON1880-2","#E49B68"],["ON1890-2","#D1814E"],["ON0094-4","#FFF1E3"],["ON1708-4","#FBF1E0"],["ON0095-4","#FDE5CE"],["ON0096-3","#F7CCAA"],["ON0097-3","#F0B58A"],["ON0098-2","#DE9D73"],["ON0099-2","#D08857"],["ON1707-4","#FCF8EA"],["ON2301-4","#FEF2DE"],["ON1601-4","#FEEDDA"],["ON2310-4","#F7CFAE"],["ON2320-3","#ECB78E"],["ON2330-2","#D79C71"],["ON2340-2","#C8865D"],["ON1807-4","#FDF6E4"],["ON2401-4","#FDF3DF"],["ON2351-4","#FCE4CB"],["ON2360-4","#F3D1B6"],["ON2370-3","#DCB08C"],["ON2380-2","#CE9872"],["ON2390-2","#BC835D"],["OA2000-1","#AD6F46"],["OA0001-1","#AE603D"],["OA2200-1","#A05B39"],["OA2400-1","#815A3E"],["OA2100-1","#7D533D"],["OA1200-1","#735445"],["OA1000-1","#754C3F"],["OA1800-1","#E47C36"],["OA0004-1","#DF7033"],["OA8200-1","#E2632C"],["OA1700-1","#D2593C"],["OA0003-1","#CC5F35"],["OA0002-1","#964D34"],["YC0002-4","#FFFDDF"],["YC0001-4","#FFFADF"],["YC0003-4","#FFF0C0"],["YC0004-4","#FFEDB4"],["YC0005-3","#FDD986"],["YC0006-2","#FAC862"],["YC0007-2","#FFC044"],["YC2808-4","#FFFDE6"],["YC3808-4","#FEFCE0"],["YC2851-4","#FFF3C5"],["YC2860-4","#FFE7A5"],["YC2870-3","#FFD985"],["YC2880-2","#FDCF6C"],["YC2890-2","#F7B640"],["YC2807-4","#FDFCEA"],["YC2801-4","#FFFCDF"],["YC3708-4","#FEFBE0"],["YC2810-4","#FFE9A8"],["YC2820-3","#FFFE7B"],["YC2830-2","#FFCC5E"],["YC2840-2","#FFBB36"],["YC0008-4","#FFFFE5"],["YC0009-4","#FFF6CE"],["YC0010-4","#FFEFBA"],["YC0011-4","#FFE6A4"],["YC0012-3","#FFDB87"],["YC0013-2","#FFD15F"],["YC0014-2","#FFC032"],["YC0015-4","#FFFFE4"],["YC0016-4","#FFFBD2"],["YC0017-4","#FFF5C4"],["YC0018-4","#FFEBA4"],["YC0019-3","#FFE289"],["YC0020-2","#FFD562"],["YC0021-2","#FFCB4A"],["YC0022-4","#FFFFDD"],["YC0023-4","#FFFFDB"],["YC0024-4","#FFF7C4"],["YC0025-4","#FFF3AF"],["YC0026-3","#FFE790"],["YC0027-2","#FFE07A"],["YC0028-2","#FDC84C"],["YC2907-4","#FFFEEC"],["YC0029-4","#FFFFE1"],["YC2951-4","#FFF5BF"],["YC2960-4","#FFEFAF"],["YC2970-3","#FFE188"],["YC2980-2","#FFD96C"],["YC2990-2","#FFC43E"],["YC4808-4","#FEFEF0"],["YC0030-4","#FFFFEE"],["YC2901-4","#FFFBD6"],["YC2910-4","#FFF2B2"],["YC2920-3","#FFE383"],["YC2930-2","#FFDA6E"],["YC2940-2","#FFCB3B"],["YC0031-4","#FFFEDF"],["YC0032-4","#FFFBD1"],["YC0033-4","#FFF2B2"],["YC0034-4","#FFEBA7"],["YC0035-3","#FFE38F"],["YC0036-2","#FFD961"],["YC0037-2","#FFC93A"],["YC0038-4","#FEFFEE"],["YC0039-4","#FFFCD1"],["YC0040-4","#FFF7BA"],["YC0041-4","#FFF1A9"],["YC0042-3","#FFE990"],["YC0043-2","#FFDD62"],["YC0044-2","#FFD345"],["YC0046-4","#FFFDD6"],["YC0045-4","#FAFADE"],["YC0048-4","#FFF7C2"],["YC0047-4","#FFF7C2"],["YC0049-3","#FFE68B"],["YC0050-2","#FFDD6F"],["YC0051-1","#FAC133"],["YC0052-4","#FFFFE2"],["YC3008-4","#FEFCD8"],["YC3051-4","#FFF8C4"],["YC3060-3","#FDE894"],["YC3070-3","#FEE17A"],["YC3080-2","#ECC451"],["YC3090-1","#E0B336"],["YC3107-4","#FEFFE6"],["YC3101-4","#FFFDDA"],["YC3251-4","#FFFBD0"],["YC3110-4","#FFF3AF"],["YC3120-3","#FFEC90"],["YC3130-2","#FFE478"],["YC3140-2","#FBD44A"],["YC3201-4","#FFFFE4"],["YC3001-4","#FFFEDE"],["YC0053-4","#FFFCCA"],["YC3010-4","#FFF6AF"],["YC3020-3","#FFEB86"],["YC3030-2","#FFE36C"],["YC3040-2","#FFD13C"],["YC0054-4","#FFFDD7"],["YC0055-4","#FFFBC2"],["YC0056-4","#FFF4A7"],["YC0058-3","#FFEA8A"],["YC0057-3","#FFEC88"],["YC0059-3","#FFE16F"],["YC0060-2","#FFD644"],["YC0061-4","#FFFFE0"],["YC0062-4","#FFFED3"],["YC0063-4","#FFF8B8"],["YC0064-4","#FFF4A9"],["YC0065-3","#FFEF94"],["YC0066-2","#FFE362"],["YC0067-2","#FFDA42"],["YC3707-4","#FBFDEC"],["YC0068-4","#FFFEDF"],["YC3151-4","#FFFDCF"],["YC3210-4","#FFFCC2"],["YC3220-3","#FFF595"],["YC3230-2","#FFEC74"],["YC3240-2","#FFDF45"],["YC3108-4","#FEFEE3"],["YC0069-4","#FFFDD6"],["YC0070-4","#FFFCBC"],["YC0071-3","#FFF493"],["YC0072-3","#FFF07D"],["YC0073-2","#FFEA78"],["YC0074-2","#FBD74F"],["YC0075-4","#FEFFEA"],["YC0076-4","#FFFFD8"],["YC0077-4","#FFFCBC"],["YC0078-4","#FFF8A7"],["YC0079-3","#FFF292"],["YC0080-2","#FFEB67"],["YC0081-2","#FFE444"],["YC0082-4","#FFFECC"],["YC0083-4","#FFF5A7"],["YC3260-3","#FDF09E"],["YC3270-3","#F8E685"],["YC3280-2","#F3E17F"],["YC0084-2","#F4D756"],["YC3290-2","#E5CB53"],["YN0001-4","#FFFFE4"],["YN3207-4","#FAFDE3"],["YN4951-4","#F7F4D7"],["YN0002-4","#F1EDC7"],["YN0003-3","#EBDEA8"],["YN0004-2","#DAC680"],["YN0005-2","#C6B268"],["YN0006-4","#FFFFE0"],["YN0007-4","#FFFFD8"],["YN0008-4","#FDFAC7"],["YN0009-4","#F9EFAE"],["YN0010-3","#EFE399"],["YN0011-2","#E5D170"],["YN0012-2","#D4BF59"],["YN0013-4","#FFFFE3"],["YN0014-4","#FFFDD6"],["YN0015-4","#FFF7C5"],["YN0016-4","#FBEFAE"],["YN0017-3","#F6E398"],["YN0018-2","#EFD271"],["YN0019-2","#E4C258"],["YN2908-4","#FAFBE9"],["YN3307-4","#FBFCDD"],["YN0020-4","#FDFBD6"],["YN3160-4","#F9EFB5"],["YN3170-3","#F6E094"],["YN3180-2","#EBD073"],["YN3190-2","#DEBD59"],["YN3308-4","#FEFCDF"],["YN3301-4","#FFFDD8"],["YN3351-4","#FBF4C6"],["YN3310-4","#FCF0B6"],["YN3320-3","#F8E398"],["YN3330-2","#F5D97D"],["YN3340-2","#DFBC53"],["YN0021-4","#FFFDE1"],["YN0022-4","#FFFBD3"],["YN0023-4","#FFF8C9"],["YN0024-4","#FCEAA9"],["YN0025-3","#F8E096"],["YN0026-2","#F3CF71"],["YN0027-2","#E6BE5B"],["YN0028-4","#FEFFEC"],["YN0029-4","#FEF6CB"],["YN0030-4","#FFF2B9"],["YN3360-4","#FEEBB6"],["YN3370-3","#F1D38A"],["YN3380-2","#E2BD68"],["YN3390-2","#D1AA4E"],["YN0031-4","#FFFFE4"],["YN0032-4","#FFF9D4"],["YN0033-4","#FFF2C2"],["YN0034-4","#FDE9AB"],["YN0035-3","#FADC94"],["YN0036-2","#F2C96E"],["YN0037-2","#E8BA5A"],["YN0038-4","#FFFDE9"],["YN3807-4","#FCFCED"],["YN3751-4","#FFF1CB"],["YN3760-4","#FAE9BB"],["YN3770-3","#EDD096"],["YN3780-2","#DDBB7A"],["YN3790-1","#BF9B4E"],["YN3007-4","#FEFFF2"],["YN3701-4","#FEFAE0"],["YN0039-4","#F9F0D5"],["YN3710-4","#F7E5B7"],["YN3720-3","#DEBC78"],["YN3730-2","#DEBC77"],["YN3740-2","#CDA964"],["YN0041-4","#FFFAE4"],["YN0040-4","#FFFCE0"],["YN0042-4","#FFE9B5"],["YN0043-3","#FBD796"],["YN0044-3","#FAD490"],["YN0045-2","#F7C776"],["YN0046-2","#EDB761"],["YN0047-4","#FBF9E9"],["YN0049-4","#FFFADF"],["YN0048-4","#FFFADD"],["YN0050-4","#FFEABC"],["YN0051-3","#FAD69B"],["YN0052-3","#FBD698"],["YN0053-2","#F2C170"],["YN0054-4","#FFFEEA"],["YN3601-4","#FDF6DA"],["YN3651-4","#FDE9BC"],["YN3610-3","#EAC48B"],["YN3620-2","#E0B472"],["YN3630-2","#CE9B55"],["YN3640-1","#B28441"],["YN0055-4","#FFFBE1"],["YN0056-4","#FDEDCA"],["YN0057-4","#FCE5BE"],["YN0058-4","#F8D7A7"],["YN0059-3","#EDC791"],["YN0060-2","#E5B470"],["YN0061-2","#D5A25D"],["YN0062-4","#FFF7D6"],["YN0063-4","#FEEABA"],["YN0064-3","#F8D198"],["YN0065-3","#F7C581"],["YN0066-3","#F6C37F"],["YN0067-2","#DFA256"],["YN0068-1","#CA8636"],["YN0069-4","#FFFDED"],["YN0070-4","#FFEDCB"],["YN0071-4","#FDE4BD"],["YN0072-4","#F8D3A4"],["YN0073-3","#EEC48E"],["YN0074-2","#E4B06F"],["YN0075-2","#D89E5A"],["YA3000-1","#FCCD33"],["YA2900-1","#FEC125"],["YA8700-1","#FFD200"],["YA2700-1","#FBA530"],["YA2800-1","#F9B123"],["YA8600-1","#FFCA00"],["YA1900-1","#EC8D2B"],["YA3200-1","#F8E923"],["YA3100-1","#ECC538"],["YA3300-1","#CCA742"],["YA2300-1","#A77144"],["YA3600-1","#A5793A"],["YA4800-1","#937A3B"],["GC0001-4","#FCFFD9"],["GC0002-4","#FBFECF"],["GC0003-4","#FCFDC2"],["GC0004-4","#FBF9A5"],["GC0005-3","#F8F48D"],["GC0006-2","#F1E962"],["GC0007-2","#F7E84C"],["GC0008-4","#F9FEDD"],["GC0009-4","#F9FDD2"],["GC0010-4","#F7FAC1"],["GC0011-4","#F7F6AF"],["GC0012-3","#F4F099"],["GC0013-2","#EEE371"],["GC0014-2","#E3D85D"],["GC0015-4","#FAFFE3"],["GC0016-4","#FDFFD8"],["GC0017-4","#F7FBD0"],["GC0018-3","#F1EF94"],["GC0019-3","#E4E683"],["GC0021-2","#DFE352"],["GC0020-2","#D7DA56"],["GC4001-4","#FAFCCA"],["GC4051-4","#FEFCC0"],["GC0022-4","#F8F9A6"],["GC4010-3","#ECE685"],["GC4020-2","#E2DC6B"],["GC4030-2","#D2CF50"],["GC4040-1","#C9C13A"],["GC3208-4","#F8FBDA"],["GC4007-4","#F5F9CF"],["GC4008-4","#F1F4C1"],["GC4070-2","#D2D960"],["GC4060-3","#BAEF5B"],["GC4080-2","#ACEB3B"],["GC4090-1","#B0B83D"],["GC4107-4","#F7FBDA"],["GC4101-4","#F9FCD5"],["GC0023-4","#F3F9C2"],["GC4110-3","#E0FF93"],["GC4120-3","#DBEB81"],["GC4130-2","#C4DB5C"],["GC4140-1","#B6CB49"],["GC5001-4","#F9FDE8"],["GC4108-4","#F1F9D5"],["GC4151-4","#F0F7C1"],["GC4160-3","#DEEEA4"],["GC4170-3","#CFE589"],["GC4180-2","#B0CC58"],["GC4190-1","#9FBA46"],["GC4507-4","#F8FDEB"],["GC4208-4","#F1FBDA"],["GC4251-4","#EEF6D2"],["GC4210-4","#E3F7BA"],["GC4220-3","#CBEB97"],["GC4230-2","#BADE77"],["GC4240-2","#A1D061"],["GC4207-4","#F5FCE4"],["GC0024-4","#E9FDD6"],["GC4310-4","#E8FCBC"],["GC0025-4","#DFFAC0"],["GC4320-3","#CCECA1"],["GC4330-2","#ABDA77"],["GC4340-2","#93C761"],["GC0026-4","#EFFFE3"],["GC4551-4","#DFF8CD"],["GC0027-4","#D6F7C1"],["GC4510-4","#D0F0B9"],["GC4520-3","#B8E59A"],["GC4530-2","#A3D87E"],["GC4540-2","#84C55E"],["GC4608-4","#F1FCEA"],["GC5301-4","#F0FEE8"],["GC4651-4","#E1F9D8"],["GC4610-4","#C9EFBF"],["GC4620-3","#B0E5AB"],["GC4630-2","#89CC81"],["GC4640-2","#71C167"],["GC5608-4","#EFFBEF"],["GC5407-4","#F0FDEC"],["GC0028-4","#CEF8CF"],["GC5310-4","#C7F3CB"],["GC5320-3","#A4E4AB"],["GC5330-2","#7ECE87"],["GC5340-2","#5FBC70"],["GC6201-4","#EBFBF0"],["GC6108-4","#E9F9EB"],["GC0029-4","#D9F1DE"],["GC5360-4","#BCE9C7"],["GC5370-3","#9CD7AC"],["GC5380-2","#79BF89"],["GC5390-2","#63AB73"],["GC4401-4","#EAFAE2"],["GC4308-4","#EAF8E4"],["GC0030-4","#D3F4D4"],["GC4660-4","#CDF0CF"],["GC4670-3","#ABDEB4"],["GC4680-2","#8AC48F"],["GC4690-2","#6FB073"],["GC5408-4","#EFFBED"],["GC5308-4","#EAF8E3"],["GC4508-4","#E4FBDC"],["GC4560-4","#C6EAC4"],["GC4570-3","#9ED1A2"],["GC4580-2","#8BC28B"],["GC4590-2","#70A76F"],["GC0031-4","#F3FFF6"],["GC0032-4","#ECFFF3"],["GC5401-4","#DEF7E7"],["GC5410-4","#ADECCD"],["GC5420-3","#8CE0B6"],["GC5430-2","#69CD96"],["GC5440-2","#41B77E"],["GC5601-4","#EBFDF0"],["GC5507-4","#E7FBEB"],["GC5501-4","#E5FCEB"],["GC5510-4","#B8EED6"],["GC5520-3","#92E1BF"],["GC5530-2","#5FC79D"],["GC5540-2","#3DB485"],["GC0033-4","#FCFFD9"],["GC0034-4","#FBFECF"],["GC5451-4","#C7F3D9"],["GC5460-4","#B5E8CF"],["GC5470-3","#8CC9AC"],["GC5480-2","#74BB96"],["GC5490-2","#5CA27D"],["GC0035-4","#EDFFF9"],["GC6207-4","#EAFCF4"],["GC5551-4","#CCF7E2"],["GC5560-4","#C5EDDF"],["GC5570-3","#98D4C4"],["GC5580-2","#71B7A5"],["GC5590-2","#579E8B"],["GC5801-4","#DEF5EC"],["GC5651-4","#CAF7EA"],["GC0036-4","#FBF9A5"],["GC5660-4","#B5E5DB"],["GC5670-3","#90CEC7"],["GC5680-2","#5FACA2"],["GC5690-2","#469189"],["GC5908-4","#EDFBF1"],["GC5708-4","#DEF9F0"],["GC5751-4","#D2FAED"],["GC5760-4","#B6E3DE"],["GC5770-3","#8BC4C2"],["GC5780-2","#62A8A8"],["GC5790-2","#459190"],["GN4908-4","#F9FCEC"],["GN5007-4","#F5F8E7"],["GN5051-4","#F1F3D0"],["GN5010-4","#E6E9C3"],["GN5020-3","#CED5A4"],["GN5030-2","#B2B77A"],["GN5040-2","#A3A567"],["GN5207-4","#EDF1E7"],["GN4408-4","#EBF0DF"],["GN5107-4","#EBF0D9"],["GN5060-4","#E4E8C5"],["GN5070-3","#CBD0A5"],["GN5080-2","#ACB57F"],["GN5090-2","#9AA06A"],["GN4201-4","#F7FDE5"],["GN4501-4","#F1FCE2"],["GN5201-4","#EFF4E9"],["GN5110-4","#DAE5BC"],["GN5120-3","#C1CE9D"],["GN5130-2","#AFBF83"],["GN5140-2","#94A468"],["GN5108-4","#EDF5E4"],["GN6007-4","#E4EDD8"],["GN5151-4","#DFECD0"],["GN5160-4","#D2E2C4"],["GN5170-3","#BDCEA3"],["GN5180-2","#A3B68A"],["GN5190-2","#879C6F"],["GN4301-4","#F7FEE4"],["GN5101-4","#F5F8E2"],["GN4307-4","#F1F9E1"],["GN4260-4","#DBEABC"],["GN4270-3","#CDDEA7"],["GN4280-2","#ACC079"],["GN4290-2","#98B066"],["GN4607-4","#F8FEEE"],["GN4601-4","#F2FDE5"],["GN4351-4","#E6FAD7"],["GN4360-4","#D3EDC3"],["GN4370-3","#BCDAA6"],["GN4380-2","#A0C685"],["GN4390-2","#82AB67"],["GN4407-4","#EDF7E8"],["GN0005-4","#E4FDD9"],["GN5351-4","#E2FADB"],["GN4410-4","#CAE7C0"],["GN4420-3","#B0D7A5"],["GN4430-2","#89B57B"],["GN4440-2","#76A76C"],["GN5508-4","#EFFDEF"],["GN5307-4","#EBF7E9"],["GN4451-4","#DAF0D3"],["GN4460-4","#C3E3C2"],["GN4470-3","#A2CEA5"],["GN4480-2","#8AB88A"],["GN4490-2","#70A172"],["GN6008-4","#ECF6E9"],["GN5208-4","#E8F2E3"],["GN6051-4","#D6E8D7"],["GN6010-4","#D2E5D0"],["GN6020-3","#B3CDB7"],["GN6030-2","#8EAC91"],["GN6040-2","#7B987D"],["GN6607-4","#F3FDF5"],["GN6001-4","#EEF9E9"],["GN6107-4","#E2F1E5"],["GN6060-4","#C6DFD0"],["GN6070-3","#A3C2AF"],["GN6080-2","#81A28A"],["GN6090-2","#6A8D76"],["GA4000-1","#D5CD33"],["GA8800-1","#ACCF3D"],["GA4100-1","#A3A741"],["GA4200-1","#77AD43"],["GA4900-1","#7A7247"],["GA5000-1","#75763D"],["GA4500-1","#3D9951"],["GA6000-1","#4F725D"],["GA5100-1","#5F714B"],["GA4300-1","#488845"],["GA0001-1","#4D694E"],["GA4400-1","#4C684C"],["GA4600-1","#2B724A"],["BC6407-4","#F4FFF8"],["BC5707-4","#E8FBF3"],["BC5701-4","#E0FBF2"],["BC5610-4","#AFF2E4"],["BC5620-3","#84E1D1"],["BC5630-2","#51CAB5"],["BC5640-2","#2DB9A1"],["BC6701-4","#E7F9F4"],["BC0001-4","#C7FBF4"],["BC5851-4","#BFEFEA"],["BC5710-4","#ACECE4"],["BC5720-3","#80DAD4"],["BC5730-2","#4AC1B7"],["BC5740-2","#19AFA5"],["BC6608-4","#F0FCF6"],["BC5808-4","#EAFCF7"],["BC5951-4","#C7F0EE"],["BC5810-4","#ACE8E5"],["BC5820-3","#76D1D2"],["BC5830-2","#44B9BC"],["BC5840-2","#0AA4A7"],["BC0002-4","#EEFBF5"],["BC5907-4","#E7FAF6"],["BC5901-4","#DFF8F3"],["BC5910-4","#A6E2E8"],["BC5920-3","#7DD2DD"],["BC5930-2","#4AB3C1"],["BC5940-2","#22A6B1"],["BC7407-4","#F4FFFB"],["BC0003-4","#E0F5F5"],["BC6601-4","#DEF6F4"],["BC6610-4","#A7E3EF"],["BC6620-3","#81CDD1"],["BC6630-2","#47B0C9"],["BC6640-2","#0998B2"],["BC7307-4","#EEFAF6"],["BC7401-4","#E1F4F0"],["BC0004-4","#D0ECEB"],["BC5860-4","#B1DEE2"],["BC5870-3","#86C4CB"],["BC5880-2","#60A6AF"],["BC5890-2","#428E96"],["BC6807-4","#EDFCFA"],["BC0005-4","#CEEDF1"],["BC0006-4","#BBE4F1"],["BC5960-4","#B4DFE5"],["BC5970-3","#87C1CE"],["BC5980-2","#61A2AE"],["BC5990-2","#478A99"],["BC0007-4","#E1FDFF"],["BC0008-4","#B9DFE5"],["BC6310-4","#ABD5DC"],["BC0009-4","#A0CFD9"],["BC6320-3","#7DB4C0"],["BC6330-2","#619DA7"],["BC6340-2","#48838F"],["BC7301-4","#E6F2EE"],["BC7501-4","#E2F2EF"],["BC6308-4","#DAEFEF"],["BC6210-4","#B4D7D8"],["BC6220-3","#95BFC2"],["BC6230-2","#709CA0"],["BC6240-2","#538484"],["BC5607-4","#F2FEF6"],["BC6307-4","#E6F3EC"],["BC6351-4","#D0E6E3"],["BC6360-4","#C4DDDE"],["BC6370-3","#96BDC6"],["BC6380-2","#79A1A8"],["BC6390-2","#5B8993"],["BC0010-4","#E8FBFA"],["BC6408-4","#E6F6F5"],["BC0011-4","#C3E6EE"],["BC6410-4","#BFE0E7"],["BC6420-3","#90C0D2"],["BC6430-2","#6AA0B2"],["BC6440-2","#538A9D"],["BC0012-4","#E2F7F5"],["BC0013-4","#CDEEF4"],["BC6651-4","#C1E4EC"],["BC6660-4","#ACD6E2"],["BC6670-3","#85BDD2"],["BC6680-2","#5A9EB5"],["BC6690-2","#3F869F"],["BC0014-4","#EFFDFD"],["BC6708-4","#DCF5FA"],["BC6751-4","#BBE5F4"],["BC6760-4","#9DCEE5"],["BC6770-3","#7DBBDA"],["BC6780-2","#58A2C5"],["BC6790-2","#448BB2"],["BC6707-4","#EDFBF9"],["BC0015-4","#E5FCFB"],["BC0016-4","#CAEDFB"],["BC6710-4","#A4DBF1"],["BC6720-3","#73BFE8"],["BC6730-2","#45A4D7"],["BC6740-2","#1E95D2"],["BC0017-4","#DBF5FF"],["BC0018-4","#CBEDFF"],["BC0019-4","#B6DFFE"],["BC6810-4","#ACD4ED"],["BC6820-3","#8ABFE6"],["BC6830-2","#65A2D5"],["BC6840-2","#4087BF"],["BC0021-4","#D3F2FF"],["BC0020-4","#D5EFF7"],["BC0022-4","#B3DFFD"],["BC0023-3","#89C2F1"],["BC0024-2","#66A6DE"],["BC0025-2","#63A4DE"],["BC0026-2","#4990CC"],["BN0002-4","#EEFBF5"],["BN0003-4","#E0F5F5"],["BN0001-4","#C7FBF4"],["BN0004-3","#8FBAEA"],["BN0005-2","#6D9BD6"],["BN0007-2","#5586C2"],["BN0006-2","#5186C5"],["BN6908-4","#E9F4F7"],["BN0008-4","#D0E6F1"],["BN0009-4","#C8E1F2"],["BN6910-4","#B2D0EA"],["BN6920-3","#8DB8E2"],["BN6930-2","#6D9ACD"],["BN6940-2","#5081BB"],["BN7807-4","#EEF8F6"],["BN0010-4","#D8E9F0"],["BN6951-4","#CBE4F1"],["BN6960-4","#AECDE2"],["BN6970-3","#8BB4D9"],["BN6980-2","#739FCB"],["BN6990-2","#5181B2"],["BN0011-4","#D9F5FF"],["BN6851-4","#C4E3F4"],["BN0012-4","#BDE1F3"],["BN7510-4","#B6D4E4"],["BN7520-3","#90B8D4"],["BN7530-2","#6A98BB"],["BN7540-2","#5080A8"],["BN0013-4","#D8EFF7"],["BN0014-4","#D0E9F8"],["BN0015-4","#C8E3F2"],["BN6860-4","#AED0E5"],["BN6870-3","#83B0D5"],["BN6880-2","#6E9ABF"],["BN6890-2","#4C81AE"],["BN7608-4","#DEECF3"],["BN7651-4","#CCE0EA"],["BN7660-4","#BED2E1"],["BN7610-4","#B0CDE3"],["BN7620-3","#85ACD0"],["BN7630-2","#6D96B8"],["BN7640-2","#5580A9"],["BN7007-4","#F5FDFB"],["BN0016-4","#D2E4EA"],["BN7551-4","#C0D8E3"],["BN7560-4","#B0D0DE"],["BN7570-3","#80A7C2"],["BN7580-2","#6589A6"],["BN7590-1","#3F647E"],["BN6907-4","#EBF8F8"],["BN0017-4","#C6E3F2"],["BN0018-4","#B5D7E3"],["BN7410-4","#A6CDDE"],["BN7420-3","#7FADC6"],["BN7430-2","#6196B1"],["BN7440-2","#477C98"],["BN6808-4","#EDF8F9"],["BN7707-4","#EBF1EC"],["BN6451-4","#C7DFE3"],["BN6460-4","#AECCD8"],["BN6470-3","#89AFC1"],["BN6480-2","#6D95A9"],["BN6490-2","#537C92"],["BN0019-4","#E9FAF4"],["BN7408-4","#E2F4F4"],["BN7451-4","#C5E0E6"],["BN7460-4","#B0D2DD"],["BN7470-3","#8BB3C8"],["BN7480-2","#6B96AC"],["BN7490-2","#4C7B92"],["BA5400-1","#16956E"],["BA5600-1","#00987B"],["BA5300-1","#24905B"],["BA5700-1","#008777"],["BA5500-1","#20785B"],["BA6100-1","#355C58"],["BA6600-1","#08778B"],["BA5900-1","#027D85"],["BA7400-1","#2A5772"],["BA5800-1","#007F6A"],["BA6400-1","#295363"],["BA6300-1","#165C63"],["BA6200-1","#205757"],["BA6700-1","#0E75A9"],["BA6800-1","#2069A0"],["BA6900-1","#2A5F93"],["BA7600-1","#354F6D"],["BA7000-1","#3C327A"],["BA7500-1","#2C4C6A"],["BA7300-1","#304047"],["VC0001-4","#F4FAF6"],["VC0002-4","#DDEDFF"],["VC0003-4","#CADDEF"],["VC7010-4","#BDD0E9"],["VC7020-3","#95B2DA"],["VC7030-2","#977DB1"],["VC7040-2","#5A7BB2"],["VC7008-4","#E4EEF1"],["VC7051-4","#D1E2EF"],["VC7060-4","#BDCFE4"],["VC7070-3","#9BB5D9"],["VC7080-2","#7F9DC7"],["VC7090-2","#6685B6"],["VC0004-2","#5F7CB7"],["VC0005-4","#EDF4F6"],["VC0006-4","#C9DDFA"],["VC0007-3","#B3D0F5"],["VC0008-3","#89B4E5"],["VC0009-2","#7A9CD5"],["VC0010-2","#6584C1"],["VC0011-2","#5D82BE"],["VC0012-4","#E4EDF3"],["VC0013-4","#DAE8F4"],["VC0014-4","#C7D8EA"],["VC0015-4","#AFC4DC"],["VC7670-3","#9CB5CF"],["VC7680-2","#7692B0"],["VC7690-2","#5E799C"],["VC7710-4","#C4CFE3"],["VC0016-4","#C0CBE3"],["VC7720-3","#A3B4D3"],["VC0017-3","#97A6CA"],["VC7730-2","#8396B8"],["VC7740-2","#6D82AC"],["VC0018-2","#6578A0"],["VC0019-4","#EEF3F2"],["VC0020-4","#E8EFF1"],["VC0021-4","#D0DBED"],["VC7110-4","#C3CDE6"],["VC7120-3","#9FADD4"],["VC7130-2","#8392C3"],["VC7140-2","#6A7BB0"],["VC7108-4","#EFF4F6"],["VC7208-4","#E7E9EB"],["VC7151-4","#D2DAE4"],["VC7160-4","#C2CBDF"],["VC7170-3","#A1AED0"],["VC7180-2","#8A95B9"],["VC7190-2","#717DA3"],["VC7708-4","#E1D9E1"],["VC7751-4","#D5D9E1"],["VC7760-4","#C3C9D9"],["VC7770-3","#9FA8C0"],["VC0022-3","#9FA6BA"],["VC7780-2","#8D95AF"],["VC7790-2","#6D7695"],["VC0023-4","#E5EAFB"],["VC0024-4","#D2D8F8"],["VC0025-4","#C2C5E6"],["VC0026-3","#B5B8E3"],["VC0027-2","#8E95C4"],["VC0028-2","#787EAE"],["VC0029-1","#515381"],["VC7251-4","#DDDCE8"],["VC0030-4","#D9D9E8"],["VC7260-4","#CDCCE2"],["VC7270-3","#CA84A7"],["VC7280-2","#918EBE"],["VC7290-2","#7878AD"],["VC0031-2","#7B7AA4"],["VC0032-4","#EBE8F7"],["VC0034-4","#E2D8F5"],["VC0033-4","#DAD8EE"],["VC7210-4","#CBC7E0"],["VC7220-3","#A9A9D0"],["VC7230-2","#9991BF"],["VC7240-2","#837BB0"],["VC0035-4","#FBE5F0"],["VC0037-4","#E0DEF8"],["VC0036-4","#DBD9F2"],["VC0038-3","#B4AEDC"],["VC0039-3","#B6ACDB"],["VC0040-2","#A293CA"],["VC0041-2","#857AB3"],["VC0042-4","#F6F1F9"],["VC0043-4","#ECE6F7"],["VC0044-4","#E2D8F1"],["VC0045-4","#DBCEF0"],["VC0046-3","#BBADDA"],["VC0047-2","#A18CC2"],["VC0048-2","#8C75AC"],["VC0049-4","#EFE9F7"],["VC0050-4","#EDE4F8"],["VC0051-4","#E8D7F2"],["VC0052-4","#D8C2E8"],["VC0053-3","#C3A7D3"],["VC0054-2","#AF8ABE"],["VC0055-2","#9A74AC"],["VC0056-4","#F2EDFB"],["VC0057-4","#F4E4F8"],["VC0058-4","#ECD7F2"],["VC0059-4","#DCC0E5"],["VC0060-3","#CDAAD8"],["VC0061-2","#BA8BBE"],["VC0062-2","#A675AC"],["VC0063-4","#FCEDF7"],["VC0064-4","#F3E3F8"],["VC0065-4","#EAD5F2"],["VC0066-4","#E0BFE4"],["VC0067-3","#D0A9D6"],["VC0068-2","#BF8BBD"],["VC0069-2","#AC74AA"],["VN0070-4","#F8EBFD"],["VN0071-4","#EADCEE"],["VN0072-4","#E0CFE2"],["VN0110-4","#DDC4D8"],["VN0120-3","#BC9BB8"],["VN0130-2","#AD8BAC"],["VN0140-2","#906F92"],["VN0108-4","#F4F1F4"],["VN0151-4","#FAE2E2"],["VN0073-4","#DCC5D8"],["VN0160-4","#D6C6D5"],["VN0170-3","#B9A5BA"],["VN0180-2","#A98DA7"],["VN0190-2","#91748E"],["VN0074-4","#F7EFF7"],["VN0075-4","#E6E0EF"],["VN0076-4","#DFD4E6"],["VN0077-4","#CCBED9"],["VN0078-3","#BDABCA"],["VN0079-2","#A189A9"],["VN0080-2","#887292"],["VN0081-4","#F0F4F8"],["VN0082-4","#EDE8F6"],["VN0083-4","#E4DCEF"],["VN0084-4","#CFC4DF"],["VN0085-3","#B8B1D2"],["VN0086-2","#9F93B7"],["VN0087-2","#877A9F"],["VA0001-1","#765387"],["VA8900-1","#68567F"],["VA8500-1","#8A475D"],["VA7200-1","#515381"],["VA8400-1","#744165"],["VA0200-1","#832D2D"],["VA7100-1","#405583"],["VA0004-1","#5B4E6C"],["VA7700-1","#424E66"],["VA0002-1","#454B66"],["VA9000-1","#4D4860"],["VA0100-1","#5F444D"],["VA0003-1","#46445E"],["NN0001-4","#F4F1F0"],["NN7201-4","#EEEDEB"],["NN2651-4","#D7D2CD"],["NN2660-4","#CCC4BD"],["NN2670-3","#A59A93"],["NN2680-2","#998982"],["NN2690-2","#7B6D66"],["NN0002-4","#F8EDE5"],["NN0003-4","#ECE3DE"],["NN0004-4","#E3D8D1"],["NN2610-4","#CCC2BB"],["NN2620-3","#B1A29B"],["NN2630-2","#94837A"],["NN2640-2","#847268"],["NN0005-4","#F6E9E9"],["NN0101-4","#F3E8E6"],["NN0851-4","#E1CDC7"],["NN0860-4","#D6BEBA"],["NN0870-3","#BE9D99"],["NN0880-2","#A57F7C"],["NN0890-2","#85615E"],["NN0006-4","#FFF8F2"],["NN0007-4","#EAD9D6"],["NN0008-4","#DDC6C2"],["NN0810-4","#D9BCBD"],["NN0820-3","#C5A2A6"],["NN0830-2","#AC8284"],["NN0840-2","#8A6266"],["NN0009-4","#FCF3ED"],["NN0010-4","#F5E1D8"],["NN0910-4","#D5B4B1"],["NN0011-4","#DAB0AC"],["NN0920-3","#C39996"],["NN0930-2","#AB7A73"],["NN0940-2","#90605A"],["NN0012-4","#FFF7F2"],["NN0013-4","#F9EBE3"],["NN0014-4","#E9CCC5"],["NN0960-4","#D8BFB7"],["NN0970-3","#BC9E95"],["NN0980-2","#A48076"],["NN0990-2","#906A62"],["NN0801-4","#EADCD6"],["NN1001-4","#ECD4C9"],["NN0015-4","#E6C6BE"],["NN1010-4","#D3AAA0"],["NN1020-3","#B78679"],["NN1030-2","#A27064"],["NN1040-2","#8D5D52"],["NN0808-4","#F9EEE7"],["NN0016-4","#EDD2C7"],["NN1051-4","#E0BFB0"],["NN1060-4","#D5AFA2"],["NN1070-3","#B38777"],["NN1080-2","#A67462"],["NN1090-2","#8B5F4F"],["NN1408-4","#F6EEE6"],["NN1208-4","#F6EBDF"],["NN0017-4","#E5BFAF"],["NN1110-4","#E0B3A0"],["NN1120-3","#C08F7E"],["NN1130-2","#B47D69"],["NN1140-2","#A46D59"],["NN1407-4","#F5EFE4"],["NN0807-4","#F7EDE2"],["NN0951-4","#F1DDD0"],["NN1210-4","#D9BFB0"],["NN1220-3","#BC9D8B"],["NN1230-2","#A2806E"],["NN1240-2","#926F5E"],["NN1108-4","#FCF3E6"],["NN1007-4","#F0E4D8"],["NN1251-4","#E7D3C2"],["NN1260-4","#D2C1B2"],["NN1270-3","#B49F8E"],["NN1280-2","#A28A78"],["NN1290-2","#917765"],["NN0908-4","#FAF6EB"],["NN1101-4","#FAEEE0"],["NN1151-4","#F0D6C5"],["NN1160-4","#DFC1AF"],["NN1170-3","#CBA38D"],["NN1180-2","#AF8268"],["NN1190-2","#9F6F58"],["NN1608-4","#FFF2E3"],["NN0901-4","#F9F0E3"],["NN1008-4","#FBEDDF"],["NN2160-4","#E0C0A8"],["NN2170-3","#C39A81"],["NN2180-2","#B88C71"],["NN2190-2","#9D7158"],["NN2507-4","#FBF4E5"],["NN1107-4","#F7EFE2"],["NN2151-4","#F2D7C1"],["NN2110-4","#E8C7AF"],["NN2120-3","#D0A788"],["NN2130-2","#B68567"],["NN2140-2","#A27253"],["NN2307-4","#FBF4E2"],["NN2101-4","#FAEBD6"],["NN2051-4","#F5DABE"],["NN2060-4","#E7C4A6"],["NN2070-3","#D4A783"],["NN2080-2","#C8946C"],["NN2090-2","#AA7854"],["NN0018-4","#FFFDF6"],["NN1801-4","#FEEFDB"],["NN2001-4","#F8E6D1"],["NN2010-4","#F2CEAB"],["NN2020-3","#DCB08B"],["NN2030-2","#CD9A71"],["NN2040-2","#BB835D"],["NN2108-4","#FDEFDB"],["NN2007-4","#F9ECD8"],["NN2451-4","#EFDECA"],["NN2460-4","#D9BDA3"],["NN2470-3","#B9997D"],["NN2480-2","#A88468"],["NN2490-2","#957357"],["NN2008-4","#FBF8EB"],["NN2308-4","#F9F3E2"],["NN2408-4","#F9ECD9"],["NN2410-4","#DFC6AC"],["NN2420-3","#CAAB8E"],["NN2430-2","#AD8B6C"],["NN2440-2","#977658"],["NN2407-4","#FBF6E4"],["NN3401-4","#F7EDD9"],["NN0019-4","#EDDABC"],["NN3410-4","#F3E3A2"],["NN3420-3","#D6B796"],["NN3430-2","#B6906C"],["NN3440-2","#A27D5A"],["NN1808-4","#FBF8E7"],["NN3508-4","#FAF6E2"],["NN3551-4","#F6E7CD"],["NN3560-4","#ECD9BB"],["NN3570-3","#D6B894"],["NN3580-2","#B4946D"],["NN3590-1","#876742"],["NN2607-4","#FCF9F0"],["NN2601-4","#EFECE1"],["NN0020-4","#ECE3D4"],["NN2560-4","#E4D8C8"],["NN2570-3","#CABBA7"],["NN2580-2","#B19E85"],["NN2590-2","#9B8570"],["NN0907-4","#F8F4E7"],["NN1201-4","#F0EADF"],["NN2608-4","#E9E6DE"],["NN2510-4","#DDD2BE"],["NN2520-3","#C7B7A0"],["NN2530-2","#B49E84"],["NN2540-2","#9F896F"],["NN1507-4","#F9F4EA"],["NN2551-4","#EDE1CD"],["NN3451-4","#EADCC5"],["NN3460-4","#D8C6B0"],["NN3470-3","#C1A98B"],["NN3480-2","#A78D6D"],["NN3490-2","#907657"],["NN0021-4","#FFFCE9"],["NN0023-4","#FFF8DE"],["NN0022-4","#FFF6E0"],["NN3510-4","#ECD9BA"],["NN3520-3","#D1B893"],["NN3530-2","#BE9C72"],["NN3540-2","#A6845B"],["NN0024-4","#FFFBE8"],["NN2107-4","#F9F4E6"],["NN0025-4","#EFD3A9"],["NN3660-3","#DFC39C"],["NN3670-3","#D4B487"],["NN3680-2","#B99260"],["NN3690-1","#916F45"],["NN3407-4","#FFFCE6"],["NN0026-4","#FFFADF"],["NN2707-4","#FBF7DB"],["NN3810-4","#EADBB9"],["NN3820-3","#D8C296"],["NN3830-2","#CBB180"],["NN3840-2","#B99D6D"],["NN4907-4","#F9F9EA"],["NN4807-4","#F9F6E2"],["NN4701-4","#F9F4DF"],["NN4760-4","#E5DDBF"],["NN4770-3","#CEC0A0"],["NN4780-2","#C1AE88"],["NN4790-2","#A5936F"],["NN2501-4","#F9F3E3"],["NN1207-4","#F4F0E3"],["NN3851-4","#EEE6D0"],["NN3860-4","#E1D8BF"],["NN3870-3","#CEC3A7"],["NN3880-2","#B2A689"],["NN3890-2","#9A8E71"],["NN3501-4","#FCF6E3"],["NN3408-4","#FAF4E0"],["NN4751-4","#F2E7CF"],["NN4710-4","#F0E7CB"],["NN4720-3","#DBCBA6"],["NN4730-2","#C2AE82"],["NN4740-2","#A99469"],["NN0028-4","#FFFFEA"],["NN0027-4","#FFFCE6"],["NN4707-4","#F8F7E2"],["NN0029-4","#F2E6C5"],["NN0030-3","#DACBA1"],["NN0031-2","#C9B27C"],["NN0032-2","#B8A16C"],["NN3801-4","#F7F5E2"],["NN4901-4","#F8F3DE"],["NN4851-4","#FAF0CF"],["NN4810-4","#F6E9C0"],["NN4820-3","#DFCEA0"],["NN4830-2","#C4AB72"],["NN4840-2","#AE965B"],["NN3507-4","#F8F8E6"],["NN3607-4","#F8F7E7"],["NN4801-4","#FAF7DF"],["NN4860-4","#EEE3C0"],["NN4870-3","#D4C397"],["NN4880-2","#BDAB78"],["NN4890-2","#A89563"],["NN3907-4","#F7F7E9"],["NN5008-4","#F6F5E1"],["NN0033-4","#F2F0D3"],["NN4910-4","#EBE8C4"],["NN4920-3","#D5CEA7"],["NN4930-2","#C0B781"],["NN4940-2","#ACA169"],["NN1301-4","#F0F2E5"],["NN4708-4","#F3F0D9"],["NN0034-4","#ECE9D5"],["NN4960-4","#DDD8BA"],["NN4970-3","#C3BB99"],["NN4980-2","#AAA27B"],["NN4990-2","#968C66"],["NN0035-4","#FDFFF5"],["NN3901-4","#F5F1E6"],["NN0036-4","#E4E2D4"],["NN3910-4","#E1DDCA"],["NN3920-3","#C6C0A9"],["NN3930-2","#B3AC91"],["NN3940-2","#9B9279"],["NN1308-4","#F2F5EE"],["NN3908-4","#EDEFE2"],["NN3951-4","#DEE0D3"],["NN3960-4","#CDCDC3"],["NN3970-3","#B3B2A6"],["NN3980-2","#9C9B8C"],["NN3990-2","#858475"],["NN1307-4","#F9FCF1"],["NN7207-4","#F6F9F5"],["NN1351-4","#DBDDD5"],["NN1310-4","#CED0C8"],["NN1320-3","#B0B3AC"],["NN1330-2","#92938D"],["NN1340-2","#7E7D76"],["NN7107-4","#F2F6F3"],["NN7101-4","#ECF1F0"],["NN0037-4","#D3D9D6"],["NN1360-4","#CCD0CC"],["NN1370-3","#A9AFAC"],["NN1380-2","#8E918F"],["NN1390-2","#817D65"],["NN7701-4","#EAF0EB"],["NN7801-4","#E8F1EC"],["NN0038-4","#C7D2D1"],["NN6510-4","#BBC8C6"],["NN6520-3","#97A5A5"],["NN6530-2","#828E8E"],["NN6540-2","#657A5C"],["NN6508-4","#E7F2EF"],["NN6801-4","#DFEDEB"],["NN6551-4","#C7D6D5"],["NN6560-4","#B7C7C8"],["NN6570-3","#91A4A7"],["NN6580-2","#74868B"],["NN6590-2","#5F7275"],["NN7808-4","#F0F6F2"],["NN6901-4","#E4F0F0"],["NN7851-4","#CEDBDB"],["NN7860-4","#BBC9CC"],["NN7870-3","#99A9B0"],["NN7880-2","#75868C"],["NN7890-2","#5E6D76"],["NN7001-4","#E8F0EE"],["NN7601-4","#E3F0F0"],["NN0039-4","#CDDEE2"],["NN7810-4","#C1D0D8"],["NN7820-3","#9AACBC"],["NN7830-2","#788C9D"],["NN7840-2","#5D7282"],["NN7607-4","#E6F2F0"],["NN7308-4","#DCE8E6"],["NN7351-4","#CCDBDD"],["NN7360-4","#B7CBD1"],["NN7370-3","#96ACB7"],["NN7380-2","#708791"],["NN7390-2","#5A737F"],["NN7508-4","#D0E4E7"],["NN0040-4","#C2D7DE"],["NN7310-4","#B9D4DC"],["NN0041-4","#B1CAD4"],["NN7320-3","#95B2C0"],["NN7330-2","#6B8C9C"],["NN7340-2","#51707F"],["NN7507-4","#EAF3EF"],["NN6208-4","#DFF0EB"],["NN6251-4","#C8E2E3"],["NN6260-4","#B7D5D5"],["NN6270-3","#8AB0B4"],["NN6280-2","#6E99A0"],["NN6290-2","#517E84"],["NN0042-4","#EEFCF7"],["NN6401-4","#E2F4F3"],["NN6301-4","#E1F5EF"],["NN6160-4","#C3DAD4"],["NN6170-3","#9CB8B3"],["NN6180-2","#7D9A95"],["NN6190-2","#63807C"],["NN5807-4","#E9F6ED"],["NN6507-4","#E7F5EC"],["NN6151-4","#D4E8DD"],["NN6110-4","#C7DDD5"],["NN6120-3","#A8C5BD"],["NN6130-2","#84A197"],["NN6140-2","#6B8980"],["NN0044-4","#EDFBF4"],["NN0043-4","#F2F6ED"],["NN6101-4","#EBF5EA"],["NN5210-4","#CAD6CC"],["NN5220-3","#AAB6AC"],["NN5230-2","#939F94"],["NN5240-2","#798379"],["NN0045-4","#F0FCF6"],["NN6501-4","#F1F8E0"],["NN5251-4","#DBE4D8"],["NN5260-4","#CBD6CC"],["NN5270-3","#A5B3AB"],["NN5280-2","#909B91"],["NN5290-2","#747F78"],["NN4700-1","#826B47"],["NN3800-1","#766545"],["NN1300-1","#4B4F4F"],["NN3900-1","#565142"],["NN5200-1","#37413E"],["NN6500-1","#333B3C"],["NN7800-1","#2F3434"],["NN3700-1","#8D6F46"],["NN3500-1","#886B4B"],["NN3400-1","#755D46"],["NN1100-1","#724E41"],["NN2500-1","#665143"],["NN0900-1","#654B43"],["NN2600-1","#534940"],["OW001-4","#F6F9FE"],["OW003-4","#F9F7FA"],["OW002-4","#F1F5FE"],["OW004-4","#F7F4F7"],["OW073-4","#F0EDEF"],["OW005-4","#F9FBFC"],["OW009-4","#FAF9FB"],["OW007-4","#FCFAF6"],["OW006-4","#F9F6F5"],["OW010-4","#F9F7F4"],["OW012-4","#FEFEF8"],["OW075-4","#FAFCFC"],["OW074-4","#F9FAF5"],["OW008-4","#FCF7F3"],["OW011-4","#FAF7F2"],["OW015-4","#FFFCF2"],["OW013-4","#FBFCF3"],["OW014-4","#FAF8F0"],["OW016-4","#FCF8ED"],["OW076-4","#F9F2E5"],["OW021-4","#FEFFFD"],["OW022-4","#FFFFF8"],["OW079-4","#FEFEF6"],["OW078-4","#FFFFF4"],["OW077-4","#F6F3EB"],["OW080-4","#FFFEF2"],["OW018-4","#FBF9ED"],["OW081-4","#FBFAEB"],["OW082-4","#F8F8EF"],["OW083-4","#F8F6EC"],["OW085-4","#FEFCE9"],["OW019-4","#FBFAEB"],["OW084-4","#F7F6E7"],["OW020-4","#F8F3E3"],["OW064-4","#F1ECDA"],["OW025-4","#FDFFFC"],["OW033-4","#FDFFFC"],["OW031-4","#FCFFF9"],["OW086-4","#FBFEF7"],["OW017-4","#FFFFF0"],["OW030-4","#FCFFFA"],["OW029-4","#FCFFF8"],["OW027-4","#FAFEFA"],["OW023-4","#FDFFF5"],["OW034-4","#F9FCF2"],["OW026-4","#FDFFF8"],["OW039-4","#FCFFF8"],["OW088-4","#FCFFF5"],["OW087-4","#FFFEF0"],["OW024-4","#FFFEED"],["OW040-4","#FCFFF2"],["OW028-4","#FBFDED"],["OW070-4","#F9FCED"],["OW035-4","#F8FBED"],["OW032-4","#FBFCE7"],["OW038-4","#FBFFF9"],["OW037-4","#FBFFF8"],["OW036-4","#FAFEF6"],["OW065-4","#F6FBF2"],["OW072-4","#F1F4E5"],["OW042-4","#FAFFFD"],["OW046-4","#F9FFFB"],["OW047-4","#F8FFF5"],["OW089-4","#F9FFF3"],["OW071-4","#F5F9EB"],["OW048-4","#F8FFFB"],["OW090-4","#F9FFF8"],["OW091-4","#F8FEF8"],["OW052-4","#F2FDF7"],["OW092-4","#F0FCF6"],["OW041-4","#FAFFFE"],["OW043-4","#FAFFFE"],["OW044-4","#FAFFFD"],["OW051-4","#F1FBF6"],["OW050-4","#F0FBF6"],["OW053-4","#F3FDFE"],["OW058-4","#ECFDFF"],["OW057-4","#EDFBFE"],["OW055-4","#EDF7F5"],["OW060-4","#DCE9EF"],["OW045-4","#F8FEFF"],["OW049-4","#EFF9FB"],["OW059-4","#F0F6F8"],["OW054-4","#EEF7F7"],["OW056-4","#EEF5F5"],["OW093-4","#F6FCF7"],["OW066-4","#F3F6EE"],["OW094-4","#F2F5ED"],["OW067-4","#F0F1E5"],["OW068-4","#EAEBE0"],["OW069-4","#F7FAF4"],["OW061-4","#F4F6F4"],["OW062-4","#F2F2E8"],["OW063-4","#EFF0E9"],["OW095-4","#EBECE6"]];</script>
 
@@ -1753,6 +1380,21 @@
       updateRecipeTarget();
       loadNipponPalette();
     }());
+  </script>
+
+  <script>
+  (function(){
+    var btns = document.querySelectorAll('.tab-btn');
+    btns.forEach(function(b){
+      b.addEventListener('click', function(){
+        btns.forEach(function(x){ x.classList.remove('active'); });
+        b.classList.add('active');
+        document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+        var t = document.getElementById(b.getAttribute('data-tab'));
+        if (t) { t.classList.add('active'); window.scrollTo(0,0); }
+      });
+    });
+  })();
   </script>
 </body>
 </html>
