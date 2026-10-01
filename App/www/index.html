@@ -421,6 +421,25 @@
     .search-code { font-size: 16px; font-weight: 700; }
     .search-meta { font-size: 12px; color: var(--secondary); margin-top: 2px; }
     .search-official { flex-shrink: 0; font-size: 13px; color: #0A84FF; background: none; border: none; padding: 6px 4px; }
+    /* 保存配色按钮 */
+    .save-palette-record { width: 100%; margin-top: 8px; font-size: 16px; font-weight: 600; color: #0A84FF; background: rgba(10,132,255,.12); border: none; border-radius: 12px; padding: 14px; }
+    .save-palette-record:active { opacity: .7; }
+    .save-palette-record:disabled { opacity: .4; }
+    /* 记录本分类切换 */
+    .note-cat-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .note-cat-tab { flex: 1; font-size: 15px; font-weight: 600; padding: 10px 0; border-radius: 10px; border: none; background: var(--card); color: var(--secondary); }
+    .note-cat-tab.active { background: #0A84FF; color: #fff; }
+    /* 配色记录列表 */
+    .palette-record-item { background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+    .palette-record-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .palette-record-title { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; }
+    .palette-record-date { font-size: 11px; color: var(--tertiary); }
+    .palette-record-del { font-size: 12px; color: #FF3B30; background: none; border: none; padding: 4px; flex-shrink: 0; }
+    .palette-record-strip { display: flex; height: 36px; border-radius: 8px; overflow: hidden; margin-bottom: 6px; }
+    .palette-record-strip span:nth-child(1) { flex: 60; }
+    .palette-record-strip span:nth-child(2) { flex: 30; }
+    .palette-record-strip span:nth-child(3) { flex: 10; }
+    .palette-record-hexes { font-size: 11px; color: var(--secondary); font-family: monospace; }
     .advice-list { counter-reset: adv; }
     .advice-list li::before { content: counter(adv); counter-increment: adv; }
 
@@ -538,6 +557,7 @@
               <div class="ratio-item"><span class="ratio-dot" id="searchDotAccent"></span><b>10%</b><span>点缀</span><code id="searchAccentHex">—</code></div>
             </div>
             <button class="copy-palette" id="copySearchPalette" type="button">复制该配色与比例</button>
+            <button class="save-palette-record" id="saveSearchPalette" type="button">保存到配色记录本</button>
           </div>
         </section>
         <section class="palette-result" aria-label="配色方案">
@@ -560,6 +580,7 @@
                 <div class="ratio-item"><span class="ratio-dot" id="dotAccent"></span><b>10%</b><span>点缀</span><code id="accentHex">—</code></div>
               </div>
               <button class="copy-palette" id="copyPalette" type="button" disabled>复制配色与比例</button>
+              <button class="save-palette-record" id="savePaletteRecord" type="button" disabled>保存配色到记录本</button>
             </section>
             <section class="nippon-top10" aria-label="立邦推荐色号">
               <div class="palette-heading">
@@ -637,6 +658,25 @@
     })();
     </script>
     <div class="tab-panel" id="tab-notes">
+      <div class="note-cat-tabs" role="group" aria-label="记录本分类">
+        <button class="note-cat-tab active" type="button" data-notecat="palette">配色记录</button>
+        <button class="note-cat-tab" type="button" data-notecat="recipe">调色配方</button>
+        <button class="note-cat-tab" type="button" data-notecat="site">工地尺寸</button>
+      </div>
+      <div data-notecat-panel="palette">
+        <section class="notebook-panel" aria-labelledby="paletteRecordsHeading">
+          <div class="records-head">
+            <div>
+              <h2 id="paletteRecordsHeading">配色记录本</h2>
+              <p class="section-note" id="paletteRecordCount">还没有配色记录</p>
+            </div>
+          </div>
+          <div class="record-list" id="paletteRecordList">
+            <div class="record-empty" id="paletteRecordEmpty">在"配色"页点"保存配色到记录本"，方案会存到这里。</div>
+          </div>
+        </section>
+      </div>
+      <div data-notecat-panel="recipe" hidden>
       <section class="notebook-panel" aria-labelledby="notebookHeading">
         <div class="notebook-head">
           <div>
@@ -698,7 +738,19 @@
             <div id="backupFileList"><div class="backup-empty">点"刷新"查看本机"涂料配色"文件夹里的备份。</div></div>
           </div>
         </section>
-      <section class="notebook-panel" aria-labelledby="siteHeading" style="margin-top:12px">
+      <section class="advice-panel" aria-labelledby="adviceHeading">
+          <h2 id="adviceHeading">手动调色建议</h2>
+          <ol class="advice-list">
+            <li><div><strong>先做小样</strong><span>先取少量基础漆试调，确认方向后再按同一比例放大，避免整桶报废。</span></div></li>
+            <li><div><strong>色浆少量多次</strong><span>每次加入都称量并记录；接近目标色时进一步减小单次加入量。</span></div></li>
+            <li><div><strong>充分搅拌</strong><span>每次加色后刮净杯壁和杯底，搅拌至颜色完全均匀再判断。</span></div></li>
+            <li><div><strong>试刷再对比</strong><span>在与实际墙面相近的底材上薄涂，放到目标空间的自然光和灯光下观察。</span></div></li>
+            <li><div><strong>干透后定色</strong><span>乳胶漆湿态与干态会有色差。等试片完全干透后，再决定是否继续加色。</span></div></li>
+          </ol>
+        </section>
+      </div>
+      <div data-notecat-panel="site" hidden>
+      <section class="notebook-panel" aria-labelledby="siteHeading" style="margin-top:0">
           <div class="records-head">
             <div>
               <h2 id="siteHeading">工地尺寸记录</h2>
@@ -748,16 +800,7 @@
             <div class="record-empty" id="siteEmpty">先填工地名字，再一条条记录墙、门、窗、床等尺寸。</div>
           </div>
         </section>
-      <section class="advice-panel" aria-labelledby="adviceHeading">
-          <h2 id="adviceHeading">手动调色建议</h2>
-          <ol class="advice-list">
-            <li><div><strong>先做小样</strong><span>先取少量基础漆试调，确认方向后再按同一比例放大，避免整桶报废。</span></div></li>
-            <li><div><strong>色浆少量多次</strong><span>每次加入都称量并记录；接近目标色时进一步减小单次加入量。</span></div></li>
-            <li><div><strong>充分搅拌</strong><span>每次加色后刮净杯壁和杯底，搅拌至颜色完全均匀再判断。</span></div></li>
-            <li><div><strong>试刷再对比</strong><span>在与实际墙面相近的底材上薄涂，放到目标空间的自然光和灯光下观察。</span></div></li>
-            <li><div><strong>干透后定色</strong><span>乳胶漆湿态与干态会有色差。等试片完全干透后，再决定是否继续加色。</span></div></li>
-          </ol>
-        </section>
+      </div>
     </div>
   </main>
   <nav class="tabbar" aria-label="底部导航">
@@ -1172,6 +1215,8 @@
         supportHex.textContent = currentPalette[1];
         accentHex.textContent = currentPalette[2];
         copyPalette.disabled = false;
+        var saveBtn = document.getElementById('savePaletteRecord');
+        if (saveBtn) saveBtn.disabled = false;
       }
 
       function updateRecipeTarget() {
@@ -2014,6 +2059,97 @@
         var name = nipponNameFor(searchColorObj.code);
         copyText(searchColorObj.code + (name ? '·' + name : '') + ' 配色方案（' + styleName + '）\n主色 60%：' + scheme[0] + '\n辅色 30%：' + scheme[1] + '\n点缀 10%：' + scheme[2], '配色方案已复制');
       });
+      // ---- 配色记录本 ----
+      var paletteRecords = [];
+      function styleNameOf() {
+        return activeScheme === 'tonal' ? '同色' : (activeScheme === 'contrast' ? '对比' : '协调');
+      }
+      function savePaletteToRecords(baseCode, baseName, baseHex, scheme) {
+        var now = new Date();
+        var dateStr = (now.getMonth() + 1) + '月' + now.getDate() + '日 ' +
+          ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+        paletteRecords.unshift({
+          baseCode: baseCode, baseName: baseName || '', baseHex: baseHex,
+          main: scheme[0], support: scheme[1], accent: scheme[2],
+          style: styleNameOf(), date: dateStr
+        });
+        renderPaletteRecords();
+        showToast('已保存到配色记录本');
+      }
+      function renderPaletteRecords() {
+        var list = document.getElementById('paletteRecordList');
+        var count = document.getElementById('paletteRecordCount');
+        count.textContent = paletteRecords.length ? paletteRecords.length + ' 条配色' : '还没有配色记录';
+        list.innerHTML = '';
+        if (!paletteRecords.length) {
+          var empty = document.createElement('div');
+          empty.className = 'record-empty';
+          empty.textContent = '在"配色"页点"保存配色到记录本"，方案会存到这里。';
+          list.appendChild(empty);
+          return;
+        }
+        paletteRecords.forEach(function (rec, idx) {
+          var item = document.createElement('div');
+          item.className = 'palette-record-item';
+          var head = document.createElement('div');
+          head.className = 'palette-record-head';
+          var title = document.createElement('div');
+          title.className = 'palette-record-title';
+          title.textContent = (rec.baseCode || rec.baseHex) + (rec.baseName ? ' · ' + rec.baseName : '') + '（' + rec.style + '）';
+          var date = document.createElement('span');
+          date.className = 'palette-record-date';
+          date.textContent = rec.date;
+          var del = document.createElement('button');
+          del.className = 'palette-record-del';
+          del.type = 'button';
+          del.textContent = '删除';
+          del.addEventListener('click', function () {
+            paletteRecords.splice(idx, 1);
+            renderPaletteRecords();
+          });
+          head.appendChild(title);
+          head.appendChild(date);
+          head.appendChild(del);
+          var strip = document.createElement('div');
+          strip.className = 'palette-record-strip';
+          [rec.main, rec.support, rec.accent].forEach(function (hex) {
+            var s = document.createElement('span');
+            s.style.backgroundColor = hex;
+            strip.appendChild(s);
+          });
+          var hexes = document.createElement('div');
+          hexes.className = 'palette-record-hexes';
+          hexes.textContent = '60% ' + rec.main + '  30% ' + rec.support + '  10% ' + rec.accent;
+          item.appendChild(head);
+          item.appendChild(strip);
+          item.appendChild(hexes);
+          list.appendChild(item);
+        });
+      }
+      // 配色页主方案保存按钮
+      var savePaletteRecord = document.getElementById('savePaletteRecord');
+      savePaletteRecord.addEventListener('click', function () {
+        if (!currentPalette || !hasSample) return;
+        var scheme = computeScheme(currentPalette[0]);
+        var name = currentNipponCode && currentNipponCode !== '—' ? nipponNameFor(currentNipponCode) : '';
+        savePaletteToRecords(currentNipponCode !== '—' ? currentNipponCode : '', name, currentPalette[0], scheme);
+      });
+      // 搜索结果保存按钮
+      document.getElementById('saveSearchPalette').addEventListener('click', function () {
+        if (!searchColorObj || !searchPalette) return;
+        var scheme = computeScheme(searchPalette[0]);
+        savePaletteToRecords(searchColorObj.code, nipponNameFor(searchColorObj.code), searchColorObj.hex, scheme);
+      });
+      // 记录本分类切换
+      var noteCatTabs = Array.prototype.slice.call(document.querySelectorAll('[data-notecat]'));
+      var noteCatPanels = Array.prototype.slice.call(document.querySelectorAll('[data-notecat-panel]'));
+      noteCatTabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          var cat = tab.getAttribute('data-notecat');
+          noteCatTabs.forEach(function (t) { t.classList.toggle('active', t === tab); });
+          noteCatPanels.forEach(function (p) { p.hidden = p.getAttribute('data-notecat-panel') !== cat; });
+        });
+      });
       addTint.addEventListener('click', function () { addTintRow(); });
       baseAmount.addEventListener('input', updateRatioPreview);
       baseUnit.addEventListener('change', updateRatioPreview);
@@ -2124,6 +2260,16 @@
               restored += sites.length;
             }
           }
+          if (Array.isArray(parsed.paletteRecords)) {
+            var palettes = parsed.paletteRecords.filter(function (r) {
+              return r && /^#[0-9A-Fa-f]{6}$/.test(r.main || '') && /^#[0-9A-Fa-f]{6}$/.test(r.support || '') && /^#[0-9A-Fa-f]{6}$/.test(r.accent || '');
+            }).slice(0, 100);
+            if (palettes.length) {
+              paletteRecords = palettes.concat(paletteRecords);
+              renderPaletteRecords();
+              restored += palettes.length;
+            }
+          }
           logBackup('import', restored);
           showToast(restored ? '已恢复 ' + restored + ' 条记录' : '文件里没有可恢复的记录');
         } catch (e) {
@@ -2142,7 +2288,7 @@
       downloadRecords.addEventListener('click', function () {
         if (!recipeRecords.length) return;
         logBackup('download', recipeRecords.length);
-        var payload = JSON.stringify({ format: '取色器手动调色记录', version: 1, records: recipeRecords, backupLog: backupLog }, null, 2);
+        var payload = JSON.stringify({ format: '取色器手动调色记录', version: 2, records: recipeRecords, paletteRecords: paletteRecords, backupLog: backupLog }, null, 2);
         var bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quSeQiBackup;
         if (bridge) {
           bridge.postMessage(payload);
