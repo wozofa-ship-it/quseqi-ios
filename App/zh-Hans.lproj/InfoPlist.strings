@@ -1,0 +1,4 @@
+/* 涂料配色中文字符串 */
+"CFBundleDisplayName" = "涂料配色";
+"NSCameraUsageDescription" = "拍照取色需要使用相机";
+"NSPhotoLibraryUsageDescription" = "从相册选择图片进行取色需要访问照片";
