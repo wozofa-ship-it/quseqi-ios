@@ -895,11 +895,12 @@
       <div id="caseDbStatus" style="padding:8px 16px 0;font-size:12px;color:var(--tertiary)">正在连接在线案例库…</div>
       <div id="caseList"></div>
       <p class="section-note" style="padding:0 16px 8px">点色块复制色号，"送去混色"可直接调配；"视频方案"在 App 内打开 B 站相关视频，"图文方案"看小红书图文。</p>
-      <div style="padding:0 16px 16px;display:flex;gap:8px;flex-wrap:wrap">
+      <div style="padding:0 16px 32px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="record-action" type="button" data-official-url="https://www.nipponpaint.com.cn/">立邦官网</button>
         <button class="record-action" type="button" data-official-url="https://www.skshu.com/">三棵树官网</button>
         <button class="record-action" type="button" data-official-url="https://www.dulux.com.cn/">多乐士官网</button>
       </div>
+      <div style="height:24px"></div>
     </div>
     <script>
     // 官网外链：App 内走原生打开，浏览器里走 window.open
@@ -2649,7 +2650,9 @@
           else openOfficial('https://www.baidu.com/s?wd=' + encodeURIComponent('site:xiaohongshu.com ' + kw));
         };
         document.getElementById('aiVideoBili').onclick = function () {
-          openOfficial('https://search.bilibili.com/all?keyword=' + encodeURIComponent(kw));
+          var vbridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quSeQiSearchVideos;
+          if (vbridge) vbridge.postMessage(kw);
+          else window.open('https://search.bilibili.com/all?keyword=' + encodeURIComponent(kw), '_blank');
         };
       }
       document.getElementById('aiSolutionBtn').addEventListener('click', aiSolution);
