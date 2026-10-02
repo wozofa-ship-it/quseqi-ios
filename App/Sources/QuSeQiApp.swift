@@ -74,7 +74,7 @@ struct WebViewContainer: UIViewRepresentable {
             }
             if message.name == "quSeQiOpenURL" {
                 if let urlStr = message.body as? String, let url = URL(string: urlStr),
-                   ["http", "https"].contains(url.scheme?.lowercased() ?? "") {
+                   ["http", "https", "shortcuts"].contains(url.scheme?.lowercased() ?? "") {
                     DispatchQueue.main.async {
                         UIApplication.shared.open(url, options: [:], completionHandler: nil)
                     }
