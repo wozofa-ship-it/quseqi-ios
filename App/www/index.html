@@ -918,7 +918,7 @@
       <div class="note-cat-tabs" role="group" aria-label="记录本分类">
         <button class="note-cat-tab active" type="button" data-notecat="palette">配色记录</button>
         <button class="note-cat-tab" type="button" data-notecat="recipe">调色配方</button>
-        <button class="note-cat-tab" type="button" data-notecat="site">尺寸记录</button>
+        <button class="note-cat-tab" type="button" data-notecat="site">测量记录</button>
       </div>
       <div data-notecat-panel="palette">
         <section class="notebook-panel" aria-labelledby="paletteRecordsHeading">
@@ -1010,8 +1010,8 @@
       <section class="notebook-panel" aria-labelledby="siteHeading" style="margin-top:0">
           <div class="records-head">
             <div>
-              <h2 id="siteHeading">尺寸记录</h2>
-              <p class="section-note" id="siteCount">还没有尺寸记录</p>
+              <h2 id="siteHeading">测量记录</h2>
+              <p class="section-note" id="siteCount">还没有测量记录</p>
             </div>
           </div>
           <div class="recipe-form" style="padding-top:0">
@@ -1745,7 +1745,7 @@
         if (backupLog.length > 30) backupLog.length = 30;
         renderBackupLog();
       }
-      /* 尺寸记录 */
+      /* 测量记录 */
       var siteRecords = [];
       var siteNameEl = document.getElementById('siteName');
       var dimCategoryEl = document.getElementById('dimCategory');
@@ -1796,7 +1796,7 @@
         var siteNames = Object.keys(sites);
         siteCountEl.textContent = siteRecords.length
           ? siteNames.length + ' 个位置 · ' + siteRecords.length + ' 条 · 共约 ' + totalArea.toFixed(1) + '㎡'
-          : '还没有尺寸记录';
+          : '还没有测量记录';
         if (!siteRecords.length) {
           siteListEl.appendChild(siteEmptyEl);
           siteEmptyEl.style.display = '';
@@ -1861,7 +1861,7 @@
         var plan = [];
         if (buckets18 > 0) plan.push(buckets18 + ' 桶 18L');
         if (buckets5 > 0) plan.push(buckets5 + ' 桶 5L');
-        var src = quickArea > 0 ? '直接输入' : '尺寸记录';
+        var src = quickArea > 0 ? '直接输入' : '测量记录';
         el.innerHTML = src + '面积 <b>' + totalArea.toFixed(1) + '㎡</b> × ' + coats + ' 遍<br>' +
           '需要油漆约 <span class="big">' + liters.toFixed(1) + ' 升</span><br>' +
           '<span style="font-size:13px;color:var(--secondary)">平均每平方用 ' + perSqm.toFixed(3) + 'L（' + (perSqm * 1000).toFixed(0) + '毫升）</span><br>' +
@@ -3038,7 +3038,7 @@
               logBackup('import', imported.length);
               recipeRecords = imported.concat(recipeRecords);
               renderRecords();
-              // 导入尺寸记录
+              // 导入测量记录
               if (Array.isArray(parsed.siteRecords)) {
                 var importedSites = parsed.siteRecords.filter(function (r) {
                   return r && typeof r.site === 'string' && typeof r.category === 'string';
