@@ -994,6 +994,11 @@
             <h3>本机备份文件 <button class="record-action" id="refreshBackups" type="button" style="float:right;padding:6px 12px;font-size:12px">刷新</button></h3>
             <div id="backupFileList"><div class="backup-empty">点"刷新"查看本机"涂料配色"文件夹里的备份。</div></div>
           </div>
+          <div class="backup-log" aria-label="iCloud备份" style="margin-top:12px">
+            <h3>iCloud 备份</h3>
+            <p class="section-note">把配色记录、调色配方、测量记录、取色历史、我的色卡全量备份到 iCloud 云盘，换手机也能恢复。需要先在快捷指令 App 里建一个叫"涂料配装备份"的快捷指令：获取文件"涂料配色/调色记录-自动备份.json"（我的iPhone）→ 存储到"iCloud 云盘/Shortcuts/涂料配色"（覆盖开，不询问）。</p>
+            <button class="copy-palette" id="iCloudBackupBtn" type="button" style="margin-top:8px">☁️ 备份到 iCloud</button>
+          </div>
         </section>
       <section class="advice-panel" aria-labelledby="adviceHeading">
           <h2 id="adviceHeading">手动调色建议</h2>
@@ -2888,12 +2893,38 @@
         autoBackupRecords();
         showToast('已保存，并自动备份到本机涂料配色文件夹');
       });
-      // 自动备份：保存配方后静默写入本机 涂料配色/调色记录-自动备份.json
+      // 自动备份：保存后静默写入本机 涂料配色/调色记录-自动备份.json（全量数据）
       function autoBackupRecords() {
-        if (!recipeRecords.length && !siteRecords.length) return;
-        var payload = JSON.stringify({ format: '涂料配色手动调色记录', version: 2, mode: 'auto', records: recipeRecords, backupLog: backupLog, siteRecords: siteRecords }, null, 2);
+        var payload = JSON.stringify({
+          format: '涂料配色全量备份', version: 3, mode: 'auto',
+          backupTime: new Date().toISOString(),
+          recipeRecords: recipeRecords,
+          backupLog: backupLog,
+          siteRecords: siteRecords,
+          paletteRecords: (typeof paletteRecords !== 'undefined' ? paletteRecords : []),
+          pickHistory: (typeof pickHistory !== 'undefined' ? pickHistory : []),
+          favColors: (typeof favColors !== 'undefined' ? favColors : [])
+        }, null, 2);
         var bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quSeQiBackup;
         if (bridge) bridge.postMessage(payload);
+      }
+      // iCloud 备份：先全量备份到本地，再调快捷指令存到 iCloud 云盘
+      function backupToICloud() {
+        autoBackupRecords();
+        showToast('正在备份到 iCloud…');
+        setTimeout(function () {
+          var name = encodeURIComponent('涂料配装备份');
+          var url = 'shortcuts://run-shortcut?name=' + name;
+          var bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quSeQiOpenURL;
+          if (bridge) {
+            bridge.postMessage(url);
+          } else {
+            window.location.href = url;
+          }
+          setTimeout(function () {
+            showToast('如果没跳转，请先在快捷指令 App 里创建"涂料配装备份"');
+          }, 1500);
+        }, 800);
       }
       window.quSeQiBackupResult = function (ok) {
         showToast(ok ? '已备份到本机涂料配色文件夹' : '备份失败，请重试');
@@ -2901,6 +2932,8 @@
       // 本机备份文件列表与恢复
       var backupFileListEl = document.getElementById('backupFileList');
       var refreshBackupsBtn = document.getElementById('refreshBackups');
+      var iCloudBackupBtn = document.getElementById('iCloudBackupBtn');
+      if (iCloudBackupBtn) iCloudBackupBtn.addEventListener('click', backupToICloud);
       window.quSeQiBackupListResult = function (jsonStr) {
         try {
           var files = JSON.parse(jsonStr);
